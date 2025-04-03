@@ -1,5 +1,7 @@
 #include "nu32dip.h"
 
+///just testing my understanding 
+
 void NU32DIP_Startup() {
     __builtin_disable_interrupts(); // disable interrupts while initializing things
 
