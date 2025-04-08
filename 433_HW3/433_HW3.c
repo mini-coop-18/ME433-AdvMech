@@ -32,6 +32,7 @@ int main()
         for (int i = 0; num_samples*100; i++){
             uint16_t result = adc_read(); //reading the adc 
             printf("ADC is %d\n", result);
+            sleep_ms(10); //wait for 10ms for 100 Hz 
         }
     }
    return 0;
