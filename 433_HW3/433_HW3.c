@@ -23,13 +23,16 @@ int main()
     }
     gpio_put(LED_PIN,1);
     while(1){       
-        while(gpio_get(GPIO_WATCH_PIN) = 0){
-            // hang out untill the button is pressed 
+        while(gpio_get(GPIO_WATCH_PIN) == 0){
+            ;// hang out untill the button is pressed 
         }
         gpio_put(LED_PIN, 0); // Turning Off the 
-        char num_samples[50];
-        scanf("%d",num_samples);
-        uint16_t result = adc_read(); //reading the adc 
+        int num_samples;
+        scanf("%d",num_samples); 
+        for (int i = 0; num_samples*100; i++){
+            uint16_t result = adc_read(); //reading the adc 
+            printf("ADC is %d\n", result);
+        }
     }
    return 0;
 }
