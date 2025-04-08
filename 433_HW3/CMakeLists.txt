@@ -46,7 +46,8 @@ pico_enable_stdio_usb(433_HW3 0)
 
 # Add the standard library to the build
 target_link_libraries(433_HW3
-        pico_stdlib)
+        pico_stdlib
+        hardware_adc)
 
 # Add the standard include files to the build
 target_include_directories(433_HW3 PRIVATE
