@@ -28,35 +28,30 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(HW4 C CXX ASM)
+project(Testing_Binary_Conv C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(HW4 HW4.c )
+add_executable(Testing_Binary_Conv Testing_Binary_Conv.c )
 
-pico_set_program_name(HW4 "HW4")
-pico_set_program_version(HW4 "0.1")
+pico_set_program_name(Testing_Binary_Conv "Testing_Binary_Conv")
+pico_set_program_version(Testing_Binary_Conv "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(HW4 0)
-pico_enable_stdio_usb(HW4 1)
+pico_enable_stdio_uart(Testing_Binary_Conv 0)
+pico_enable_stdio_usb(Testing_Binary_Conv 1)
 
 # Add the standard library to the build
-target_link_libraries(HW4
+target_link_libraries(Testing_Binary_Conv
         pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(HW4 PRIVATE
+target_include_directories(Testing_Binary_Conv PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
-# Add any user requested libraries
-target_link_libraries(HW4 
-        hardware_spi
-        )
-
-pico_add_extra_outputs(HW4)
+pico_add_extra_outputs(Testing_Binary_Conv)
 
