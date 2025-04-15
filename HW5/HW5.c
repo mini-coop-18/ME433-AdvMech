@@ -15,6 +15,8 @@
 #define PIN_MOSI 19
 
 #define WAVE_LEN 1000
+void SendData_DAC(int, float);
+
 
 union FloatInt {
     float f;
@@ -61,7 +63,8 @@ void SPI_SetUp(){
 }
 
 void spi_ram_init(){
- //initialzie the Chip 
+    int write = 0b00000010 //to write
+    int seq_op = 0b01000000 //to set op mode
 }
 
 int main()
@@ -69,13 +72,55 @@ int main()
     stdio_init_all();
     SPI_SetUp();    
     make_Sin_Waveform();
+    //send entire waveform to external RAM 
     while (true) {
         static int c = 0;
-
+        //    int read = 0b00000011 // to read mode 
+        float Return //get one point from external RAM that we want 
+        SendData_DAC(0,Return);//send waveform to DAC 
         sleep_ms(1000/WAVE_LEN); //wait
         c++;
         if( c == WAVE_LEN-1){//reset count
             c = 0;
         }
     }
+}
+
+void SendData_DAC(int chan, float volt){
+    uint8_t data[2];
+    data[0] = 0;
+    data[0] = data[0] | (chan << 7); //channel is the first bit 
+    data[0] = data[0] | (0b111<<4); // Buffered, Gain, Shutdown 
+    uint16_t volt_converted = 1024*volt/3.3;
+    printf("Voltage We're Shooting For: %f \r\n", volt);
+    //printf("Calculated Voltage Conversion: %u \r\n", volt_converted);
+    int volt_data[10] = {0,0,0,0,0,0,0,0,0,0};  // Array to store binary digits
+    int i = 0;
+    int in = volt_converted;
+    if (in > 1023){
+        in = 1023; //10 bit number check
+    }
+    while(in > 0) {
+        volt_data[9-i] = in % 2;  // Store remainder
+        in /= 2;;  // Divide by 2 (this was a chat gpt find. i'm hoping that's ok)
+        //printf("Volt Data = %d \n\r", volt_data[9-i]);
+        i++;
+    }
+    printf("Volt Data = %d", volt_data);
+    data[0] = data[0] | (volt_data[0]<<3);
+    data[0] = data[0] | (volt_data[1]<<2);
+    data[0] = data[0] | (volt_data[2]<<1);
+    data[0] = data[0] | (volt_data[3]<<0); 
+
+    data[1] = 0; 
+    data[1] = data[1] | (volt_data[4]<<7); 
+    data[1] = data[1] | (volt_data[5]<<6); 
+    data[1] = data[1] | (volt_data[6]<<5); 
+    data[1] = data[1] | (volt_data[7]<<4); 
+    data[1] = data[1] | (volt_data[8]<<3); 
+    data[1] = data[1] | (volt_data[9]<<2); 
+    printf("%b %b \r\n", data[0], data[1]);
+    cs_select(PIN_CS);
+    spi_write_blocking(SPI_PORT, data, 2); // where data is a uint8_t array with length len
+    cs_deselect(PIN_CS);
 }
