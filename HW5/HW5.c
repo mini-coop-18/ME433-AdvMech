@@ -58,9 +58,10 @@ void SPI_SetUp(){
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
     // Chip select is active-low, so we'll initialise it to a driven-high state
-    gpio_init(PIN_CS_RAM);
     gpio_set_dir(PIN_CS_DAC, GPIO_OUT);
     gpio_put(PIN_CS_DAC, 1);
+
+    gpio_init(PIN_CS_RAM);
     gpio_set_dir(PIN_CS_RAM, GPIO_OUT);
     gpio_put(PIN_CS_RAM, 1);   
     // For more examples of SPI use see https://github.com/raspberrypi/pico-examples/tree/master/spi
@@ -85,26 +86,42 @@ int main()
     while (!stdio_usb_connected()) { //waiting for the screen to open the port 
         sleep_ms(100);
     }
-    uint8_t data_test[4] = {0,0,0,0};
+    union FloatInt float_test ;
+    float_test.f = 12.5; 
+    uint8_t float_input[4]; 
+    float_input[0] = (float_test.i>>24);
+    float_input[1] = float_test.i & (0xFF <<16);
+    float_input[2] = float_test.i & (0xFF <<8);
+    float_input[3] = float_test.i & 0xFF ;
+    uint8_t data_test[7] = {0,0,0,0,0,0,0};
     data_test[0] = WRITEMODE;//read mode 
     data_test[1] = 0b0;//adress of 0
-    char num = 12;
     data_test[2] = 0b1;//address is still 1
-    data_test[3] = num;
-    printf("%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3]);
-    uint8_t data_returned[4];    
+    data_test[3] = float_input[0];
+    data_test[4] = float_input[1];
+    data_test[5] = float_input[2];
+    data_test[6] = float_input[3]; 
+    data_test[7] = float_input[4];
+    uint8_t data_returned[7];   
+    data_returned[0] = READMODE;//read mode 
+    data_returned[1] = 0b0;//adress of 0
+    data_returned[2] = 0b1;//address is still 1
+    data_returned[3] = 1; 
+
+    printf("Before Transfer:\n\r%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6],data_test[7]);
+    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6],data_returned[7]);
     cs_select(PIN_CS_RAM);
     spi_write_read_blocking(SPI_PORT, data_test, data_returned,8);
     cs_deselect(PIN_CS_RAM);
-    data_test[0] = READMODE;//read mode 
-    data_test[1] = 0b0;//adress of 0
-    num = 0b1;
-    data_test[2] = 0b1;//address is still 1
-    data_test[3] = num;
+    printf("After 1st One:\n\r%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6],data_test[7]);
+    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6],data_returned[7]);
+   
     cs_select(PIN_CS_RAM);
     spi_write_read_blocking(SPI_PORT, data_test, data_returned,8);
     cs_deselect(PIN_CS_RAM);
-    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3]);
+    printf("After 2nd One:\n\r%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6],data_test[7]);
+    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6],data_returned[7]);
+   
     //make_Sin_Waveform();
     //send entire waveform to external RAM 
     while (true) {
