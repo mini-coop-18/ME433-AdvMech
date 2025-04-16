@@ -14,7 +14,7 @@
 #define PIN_SCK  18
 #define PIN_MOSI 19
 
-#define WAVE_LEN 1000
+#define WAVE_LEN 100
 #define WRITEMODE 0b00000010
 #define READMODE 0b00000011
 
@@ -27,8 +27,7 @@ void SendData_DAC(int, float);
 float ReadData_RAM();
 void SendData_RAM();
 void RAM_Send(union FloatInt, int);
-
-
+float RAM_Get(int);
 
 static volatile float Sin_Waveform[WAVE_LEN]; // waveforms
 
@@ -92,74 +91,17 @@ int main()
         sleep_ms(100);
     }
     make_Sin_Waveform();
-    printf("Waveform Loaded In RAM")
-    for (int i=0; i<WAVE_LEN; i++){
-        uint8_t data_send[7] = {0,0,0,0,0,0,0};
-        data_send[0] = READMODE;//read mode 
-        int addr = i ; 
-        if(addr>256){
-            data_send[1] = 0b0;//adress of 0
-            data_send[2] = addr;
-        }
-        if(addr<=256){
-            int i = 0;
-            int adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
-            while(addr > 0) {
-                adr_data[15-i] = addr % 2;  // Store remainder
-                addr /= 2;;  // Divide by 2 (this was a chat gpt find. i'm hoping that's ok)
-                //printf("Volt Data = %d \n\r", volt_data[9-i]);
-                i++;
-            }
-            data_send[1] = data_send[1] | (adr_data[0]<<7); 
-            data_send[1] = data_send[1] | (adr_data[1]<<6); 
-            data_send[1] = data_send[1] | (adr_data[2]<<5); 
-            data_send[1] = data_send[1] | (adr_data[3]<<4); 
-            data_send[1] = data_send[1] | (adr_data[4]<<3); 
-            data_send[1] = data_send[1] | (adr_data[5]<<2); 
-            data_send[1] = data_send[1] | (adr_data[6]<<1); 
-            data_send[1] = data_send[1] | (adr_data[7]<<0); 
-    
-            data_send[2] = data_send[2] | (adr_data[8]<<7); 
-            data_send[2] = data_send[2] | (adr_data[9]<<6); 
-            data_send[2] = data_send[2] | (adr_data[10]<<5); 
-            data_send[2] = data_send[2] | (adr_data[11]<<4); 
-            data_send[2] = data_send[2] | (adr_data[12]<<3); 
-            data_send[2] = data_send[2] | (adr_data[13]<<2); 
-            data_send[2] = data_send[2] | (adr_data[14]<<1); 
-            data_send[2] = data_send[2] | (adr_data[15]<<0); 
-    
-        }
-        
-        uint8_t data_returned[7] = {0,0,0,0,0,0,0};
-        
-        //actually reading the data 
-        cs_select(PIN_CS_RAM);
-        spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
-        cs_deselect(PIN_CS_RAM);
-    }
+    printf("Waveform Loaded In RAM");
 
-    //printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
-
-    cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
-    cs_deselect(PIN_CS_RAM);
-
-    // printf("After 2nd Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
-    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
-    
-    //make_Sin_Waveform();
-    //send entire waveform to external RAM 
-    while (true) {
-        //static int c = 0;
-        //SendData_RAM();//    int read = 0b00000011 // to read mode 
-        //float Return = ReadData_RAM();//get one point from external RAM that we want 
-        //SendData_DAC(0,Return);//send waveform point to DAC 
-        //sleep_ms(1000/WAVE_LEN); //wait
-        //c++;
-        //if( c == WAVE_LEN-1){//reset count
-            //c = 0;
+    while (true){
+        int i = 0;  
+        for (i; i<WAVE_LEN; i++){
+            printf("We're Hoping For: %f\r\n", Sin_Waveform[i]);
+            float voltage_rec = RAM_Get(i);
+            //SendData_DAC(0, voltage_rec);         
         }
-    }
+    }  
+}
 
 
 void SendData_DAC(int chan, float volt){
@@ -248,9 +190,61 @@ void RAM_Send(union FloatInt Val, int addr){
     data_send[3] = (Val.i>>24)&0xFF;
     data_send[4] = (Val.i>>16)&0xFF;
     data_send[5] = (Val.i>>8)&0xFF;
-    data_send[6] = (Val.i>>8)&0xFF;
+    data_send[6] = (Val.i>>0)&0xFF;
 
     cs_select(PIN_CS_RAM);
     spi_write_read_blocking(SPI_PORT, data_send, data_get,14);
     cs_deselect(PIN_CS_RAM);
+}
+
+float RAM_Get(int addr){
+    uint8_t data_send[7] = {0,0,0,0,0,0,0};
+    data_send[0] = READMODE;//read mode 
+    if(addr>256){
+        data_send[1] = 0b0;//adress of 0
+        data_send[2] = addr;
+    }
+    if(addr<=256){
+        int i = 0;
+        int adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
+        while(addr > 0) {
+            adr_data[15-i] = addr % 2;  // Store remainder
+            addr /= 2;;  // Divide by 2 (this was a chat gpt find. i'm hoping that's ok)
+            //printf("Volt Data = %d \n\r", volt_data[9-i]);
+            i++;
+        }
+        data_send[1] = data_send[1] | (adr_data[0]<<7); 
+        data_send[1] = data_send[1] | (adr_data[1]<<6); 
+        data_send[1] = data_send[1] | (adr_data[2]<<5); 
+        data_send[1] = data_send[1] | (adr_data[3]<<4); 
+        data_send[1] = data_send[1] | (adr_data[4]<<3); 
+        data_send[1] = data_send[1] | (adr_data[5]<<2); 
+        data_send[1] = data_send[1] | (adr_data[6]<<1); 
+        data_send[1] = data_send[1] | (adr_data[7]<<0); 
+
+        data_send[2] = data_send[2] | (adr_data[8]<<7); 
+        data_send[2] = data_send[2] | (adr_data[9]<<6); 
+        data_send[2] = data_send[2] | (adr_data[10]<<5); 
+        data_send[2] = data_send[2] | (adr_data[11]<<4); 
+        data_send[2] = data_send[2] | (adr_data[12]<<3); 
+        data_send[2] = data_send[2] | (adr_data[13]<<2); 
+        data_send[2] = data_send[2] | (adr_data[14]<<1); 
+        data_send[2] = data_send[2] | (adr_data[15]<<0); 
+    }
+    uint8_t data_returned[7] = {0,0,0,0,0,0,0};
+
+    cs_select(PIN_CS_RAM);
+    spi_write_read_blocking(SPI_PORT, data_send, data_returned,14);
+    cs_deselect(PIN_CS_RAM);
+    printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+    
+    union FloatInt Volt_Rec;
+
+    Volt_Rec.i = (data_returned[3]&0xFF)<<24;
+    Volt_Rec.i = (data_returned[4]&0xFF)<<16;
+    Volt_Rec.i = (data_returned[5]&0xFF)<<8;
+    Volt_Rec.i = data_returned[6]&0xFF;
+    float Volt_Rec_f = Volt_Rec.f;
+    printf("We're Getting Back: %f \n\r", Volt_Rec_f);
+    return Volt_Rec_f;
 }
