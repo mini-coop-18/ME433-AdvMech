@@ -87,12 +87,14 @@ int main()
         sleep_ms(100);
     }
     union FloatInt float_test ;
-    float_test.f = 12.5; 
+    float_test.f = 1.1; 
     uint8_t float_input[4]; 
-    float_input[0] = (float_test.i>>24);
+    float_input[0] = (float_test.i>>24)&0xFF;
     float_input[1] = float_test.i & (0xFF <<16);
     float_input[2] = float_test.i & (0xFF <<8);
     float_input[3] = float_test.i & 0xFF ;
+    printf("In Existance: float_input is: %b\n\r", float_test);
+    
     uint8_t data_test[7] = {0,0,0,0,0,0,0};
     data_test[0] = WRITEMODE;//read mode 
     data_test[1] = 0b0;//adress of 0
@@ -101,27 +103,33 @@ int main()
     data_test[4] = float_input[1];
     data_test[5] = float_input[2];
     data_test[6] = float_input[3]; 
-    data_test[7] = float_input[4];
-    uint8_t data_returned[7];   
+
+    uint8_t data_returned[7] = {0,0,0,0,0,0,0};
     data_returned[0] = READMODE;//read mode 
     data_returned[1] = 0b0;//adress of 0
     data_returned[2] = 0b1;//address is still 1
-    data_returned[3] = 1; 
 
-    printf("Before Transfer:\n\r%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6],data_test[7]);
-    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6],data_returned[7]);
+
+    printf("Before Transfer: \n\r%b\n\r", data_test);
+    printf("%b\n\r", data_returned);
+    // printf("Before Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
+    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_test, data_returned,8);
+    spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
     cs_deselect(PIN_CS_RAM);
-    printf("After 1st One:\n\r%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6],data_test[7]);
-    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6],data_returned[7]);
-   
+    printf("1st Transfer: \n\r%b\n\r", data_test);
+    printf("%b\n\r", data_returned);
+    // printf("After 1st Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
+    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+    
     cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_test, data_returned,8);
+    spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
     cs_deselect(PIN_CS_RAM);
-    printf("After 2nd One:\n\r%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6],data_test[7]);
-    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6],data_returned[7]);
-   
+    printf("2nd Transfer: \n\r%b\n\r", data_test);
+    printf("%b\n\r", data_returned);
+    // printf("After 2nd Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
+    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+    
     //make_Sin_Waveform();
     //send entire waveform to external RAM 
     while (true) {
