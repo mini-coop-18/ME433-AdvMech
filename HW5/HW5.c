@@ -42,8 +42,6 @@ void make_Sin_Waveform(){
     }
 }
 
-
-
 static inline void cs_select(uint cs_pin) {
     asm volatile("nop \n nop \n nop"); // FIXME
     gpio_put(cs_pin, 0);
@@ -94,39 +92,52 @@ int main()
         sleep_ms(100);
     }
     make_Sin_Waveform();
-    union FloatInt float_test ;
-    float_test.f = 10001.12; 
-    uint8_t float_input[4]; 
-    float_input[0] = (float_test.i>>24)&0xFF;
-    float_input[1] = (float_test.i>>16)&0xFF;
-    float_input[2] = (float_test.i>>8)&0xFF;
-    float_input[3] = float_test.i&0xFF ;
+    printf("Waveform Loaded In RAM")
+    for (int i=0; i<WAVE_LEN; i++){
+        uint8_t data_send[7] = {0,0,0,0,0,0,0};
+        data_send[0] = READMODE;//read mode 
+        int addr = i ; 
+        if(addr>256){
+            data_send[1] = 0b0;//adress of 0
+            data_send[2] = addr;
+        }
+        if(addr<=256){
+            int i = 0;
+            int adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
+            while(addr > 0) {
+                adr_data[15-i] = addr % 2;  // Store remainder
+                addr /= 2;;  // Divide by 2 (this was a chat gpt find. i'm hoping that's ok)
+                //printf("Volt Data = %d \n\r", volt_data[9-i]);
+                i++;
+            }
+            data_send[1] = data_send[1] | (adr_data[0]<<7); 
+            data_send[1] = data_send[1] | (adr_data[1]<<6); 
+            data_send[1] = data_send[1] | (adr_data[2]<<5); 
+            data_send[1] = data_send[1] | (adr_data[3]<<4); 
+            data_send[1] = data_send[1] | (adr_data[4]<<3); 
+            data_send[1] = data_send[1] | (adr_data[5]<<2); 
+            data_send[1] = data_send[1] | (adr_data[6]<<1); 
+            data_send[1] = data_send[1] | (adr_data[7]<<0); 
     
-    uint8_t data_test[7] = {0,0,0,0,0,0,0};
-    data_test[0] = WRITEMODE;//read mode 
-    data_test[1] = 0b0;//adress of 0
-    data_test[2] = 0b10;//address is still 2
-    data_test[3] = float_input[0];
-    data_test[4] = float_input[1];
-    data_test[5] = float_input[2];
-    data_test[6] = float_input[3]; 
-
-    uint8_t data_returned[7] = {0,0,0,0,0,0,0};
-
-
-    // printf("Before Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
-    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+            data_send[2] = data_send[2] | (adr_data[8]<<7); 
+            data_send[2] = data_send[2] | (adr_data[9]<<6); 
+            data_send[2] = data_send[2] | (adr_data[10]<<5); 
+            data_send[2] = data_send[2] | (adr_data[11]<<4); 
+            data_send[2] = data_send[2] | (adr_data[12]<<3); 
+            data_send[2] = data_send[2] | (adr_data[13]<<2); 
+            data_send[2] = data_send[2] | (adr_data[14]<<1); 
+            data_send[2] = data_send[2] | (adr_data[15]<<0); 
     
-    cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
-    cs_deselect(PIN_CS_RAM);
+        }
+        
+        uint8_t data_returned[7] = {0,0,0,0,0,0,0};
+        
+        //actually reading the data 
+        cs_select(PIN_CS_RAM);
+        spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
+        cs_deselect(PIN_CS_RAM);
+    }
 
-    // printf("After 1st Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
-    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
-    
-    data_test[0] = READMODE;//read mode 
-    data_test[1] = 0b0;//adress of 0
-    data_test[2] = 0b10;//address is still 2
     //printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
 
     cs_select(PIN_CS_RAM);
