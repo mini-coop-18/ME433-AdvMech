@@ -15,12 +15,16 @@
 #define PIN_MOSI 19
 
 #define WAVE_LEN 1000
+#define WRITEMODE 0b00000010
+#define READMODE 0b00000011
+
 void SendData_DAC(int, float);
+float ReadData_RAM();
+void SendData_RAM();
 
-
-union FloatInt {
-    float f;
-    uint32_t i;
+union FloatInt { //"Double Cast" 
+    float f; //4 Bites, SPI Write Fx Needs Bites (So Right Shit by 24)
+    uint32_t i; 
 };
 
 
@@ -49,11 +53,12 @@ void SPI_SetUp(){
     spi_init(SPI_PORT, WAVE_LEN*56*2); //myabe becasue 8*7 is 
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_CS_DAC,   GPIO_FUNC_SIO);
-    gpio_set_function(PIN_CS_RAM,   GPIO_FUNC_SIO);
+    //gpio_set_function(PIN_CS_RAM,   GPIO_FUNC_SIO);
     gpio_set_function(PIN_SCK,  GPIO_FUNC_SPI);
     gpio_set_function(PIN_MOSI, GPIO_FUNC_SPI);
     
     // Chip select is active-low, so we'll initialise it to a driven-high state
+    gpio_init(PIN_CS_RAM);
     gpio_set_dir(PIN_CS_DAC, GPIO_OUT);
     gpio_put(PIN_CS_DAC, 1);
     gpio_set_dir(PIN_CS_RAM, GPIO_OUT);
@@ -63,28 +68,57 @@ void SPI_SetUp(){
 }
 
 void spi_ram_init(){
-    int write = 0b00000010 //to write
-    int seq_op = 0b01000000 //to set op mode
+    uint8_t data_i[2];
+    data_i[0] = 0b00000010; //to write // this one first 
+    data_i[1] = 0b01000000 ;//to set op mode
+    cs_select(PIN_CS_RAM);
+    spi_write_blocking(SPI_PORT, data_i, 2); // where data is a uint8_t array with length len
+    cs_deselect(PIN_CS_RAM);
 }
+
 
 int main()
 {
     stdio_init_all();
-    SPI_SetUp();    
-    make_Sin_Waveform();
+    SPI_SetUp();   
+    spi_ram_init();
+    while (!stdio_usb_connected()) { //waiting for the screen to open the port 
+        sleep_ms(100);
+    }
+    uint8_t data_test[4] = {0,0,0,0};
+    data_test[0] = WRITEMODE;//read mode 
+    data_test[1] = 0b0;//adress of 0
+    char num = 12;
+    data_test[2] = 0b1;//address is still 1
+    data_test[3] = num;
+    printf("%b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3]);
+    uint8_t data_returned[4];    
+    cs_select(PIN_CS_RAM);
+    spi_write_read_blocking(SPI_PORT, data_test, data_returned,8);
+    cs_deselect(PIN_CS_RAM);
+    data_test[0] = READMODE;//read mode 
+    data_test[1] = 0b0;//adress of 0
+    num = 0b1;
+    data_test[2] = 0b1;//address is still 1
+    data_test[3] = num;
+    cs_select(PIN_CS_RAM);
+    spi_write_read_blocking(SPI_PORT, data_test, data_returned,8);
+    cs_deselect(PIN_CS_RAM);
+    printf("%b   %b   %b   %b\n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3]);
+    //make_Sin_Waveform();
     //send entire waveform to external RAM 
     while (true) {
-        static int c = 0;
-        //    int read = 0b00000011 // to read mode 
-        float Return //get one point from external RAM that we want 
-        SendData_DAC(0,Return);//send waveform to DAC 
-        sleep_ms(1000/WAVE_LEN); //wait
-        c++;
-        if( c == WAVE_LEN-1){//reset count
-            c = 0;
+        //static int c = 0;
+        //SendData_RAM();//    int read = 0b00000011 // to read mode 
+        //float Return = ReadData_RAM();//get one point from external RAM that we want 
+        //SendData_DAC(0,Return);//send waveform point to DAC 
+        //sleep_ms(1000/WAVE_LEN); //wait
+        //c++;
+        //if( c == WAVE_LEN-1){//reset count
+            //c = 0;
         }
     }
-}
+
 
 void SendData_DAC(int chan, float volt){
     uint8_t data[2];
@@ -120,7 +154,19 @@ void SendData_DAC(int chan, float volt){
     data[1] = data[1] | (volt_data[8]<<3); 
     data[1] = data[1] | (volt_data[9]<<2); 
     printf("%b %b \r\n", data[0], data[1]);
-    cs_select(PIN_CS);
+    cs_select(PIN_CS_DAC);
     spi_write_blocking(SPI_PORT, data, 2); // where data is a uint8_t array with length len
-    cs_deselect(PIN_CS);
+    cs_deselect(PIN_CS_DAC);
 }
+
+// void SendData_RAM(){
+//     int write = 0b00000010 //to write // this one first 
+//     spi_write_read_blocking();
+
+// }
+
+// float ReadData_RAM(){
+//     int read = 0b00000011 //to read 
+//     spi_write_read_blocking();
+//     return data_returned;
+// }
