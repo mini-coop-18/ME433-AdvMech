@@ -18,24 +18,31 @@
 #define WRITEMODE 0b00000010
 #define READMODE 0b00000011
 
-void SendData_DAC(int, float);
-float ReadData_RAM();
-void SendData_RAM();
-
 union FloatInt { //"Double Cast" 
     float f; //4 Bites, SPI Write Fx Needs Bites (So Right Shit by 24)
     uint32_t i; 
 };
 
+void SendData_DAC(int, float);
+float ReadData_RAM();
+void SendData_RAM();
+void RAM_Send(union FloatInt, int);
 
-static volatile union FloatInt Sin_Waveform[WAVE_LEN]; // waveforms
+
+
+static volatile float Sin_Waveform[WAVE_LEN]; // waveforms
 
 
 void make_Sin_Waveform(){
+    union FloatInt sin_wave;
     for (int i=0; i<WAVE_LEN; i++){
-        Sin_Waveform[i].f = 1.65*sin(i*4*3.14/(WAVE_LEN))+1.65; //done via a graphing calculator/trial and error
+        Sin_Waveform[i] = 1.65*sin(i*4*3.14/(WAVE_LEN))+1.65; //done via a graphing calculator/trial and error
+        sin_wave.f = Sin_Waveform[i];
+        RAM_Send(sin_wave,i);
     }
 }
+
+
 
 static inline void cs_select(uint cs_pin) {
     asm volatile("nop \n nop \n nop"); // FIXME
@@ -70,7 +77,7 @@ void SPI_SetUp(){
 
 void spi_ram_init(){
     uint8_t data_i[2];
-    data_i[0] = 0b00000010; //to write // this one first 
+    data_i[0] = 0b00000001; //to write // this one first 
     data_i[1] = 0b01000000 ;//to set op mode
     cs_select(PIN_CS_RAM);
     spi_write_blocking(SPI_PORT, data_i, 2); // where data is a uint8_t array with length len
@@ -86,47 +93,46 @@ int main()
     while (!stdio_usb_connected()) { //waiting for the screen to open the port 
         sleep_ms(100);
     }
+    make_Sin_Waveform();
     union FloatInt float_test ;
-    float_test.f = 1.1; 
+    float_test.f = 10001.12; 
     uint8_t float_input[4]; 
     float_input[0] = (float_test.i>>24)&0xFF;
-    float_input[1] = float_test.i & (0xFF <<16);
-    float_input[2] = float_test.i & (0xFF <<8);
-    float_input[3] = float_test.i & 0xFF ;
-    printf("In Existance: float_input is: %b\n\r", float_test);
+    float_input[1] = (float_test.i>>16)&0xFF;
+    float_input[2] = (float_test.i>>8)&0xFF;
+    float_input[3] = float_test.i&0xFF ;
     
     uint8_t data_test[7] = {0,0,0,0,0,0,0};
     data_test[0] = WRITEMODE;//read mode 
     data_test[1] = 0b0;//adress of 0
-    data_test[2] = 0b1;//address is still 1
+    data_test[2] = 0b10;//address is still 2
     data_test[3] = float_input[0];
     data_test[4] = float_input[1];
     data_test[5] = float_input[2];
     data_test[6] = float_input[3]; 
 
     uint8_t data_returned[7] = {0,0,0,0,0,0,0};
-    data_returned[0] = READMODE;//read mode 
-    data_returned[1] = 0b0;//adress of 0
-    data_returned[2] = 0b1;//address is still 1
 
 
-    printf("Before Transfer: \n\r%b\n\r", data_test);
-    printf("%b\n\r", data_returned);
     // printf("Before Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
-    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
-    cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
-    cs_deselect(PIN_CS_RAM);
-    printf("1st Transfer: \n\r%b\n\r", data_test);
-    printf("%b\n\r", data_returned);
-    // printf("After 1st Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
     // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     
     cs_select(PIN_CS_RAM);
     spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
     cs_deselect(PIN_CS_RAM);
-    printf("2nd Transfer: \n\r%b\n\r", data_test);
-    printf("%b\n\r", data_returned);
+
+    // printf("After 1st Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
+    // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+    
+    data_test[0] = READMODE;//read mode 
+    data_test[1] = 0b0;//adress of 0
+    data_test[2] = 0b10;//address is still 2
+    //printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+
+    cs_select(PIN_CS_RAM);
+    spi_write_read_blocking(SPI_PORT, data_test, data_returned,14);
+    cs_deselect(PIN_CS_RAM);
+
     // printf("After 2nd Transfer:\n\r%b   %b   %b   %b   %b   %b   %b \n\r", data_test[0],data_test[1],data_test[2],data_test[3],data_test[4],data_test[5],data_test[6]);
     // printf("%b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     
@@ -184,14 +190,56 @@ void SendData_DAC(int chan, float volt){
     cs_deselect(PIN_CS_DAC);
 }
 
-// void SendData_RAM(){
-//     int write = 0b00000010 //to write // this one first 
-//     spi_write_read_blocking();
-
-// }
 
 // float ReadData_RAM(){
 //     int read = 0b00000011 //to read 
 //     spi_write_read_blocking();
 //     return data_returned;
 // }
+
+void RAM_Send(union FloatInt Val, int addr){
+    uint8_t data_send[7] = {0,0,0,0,0,0,0};
+    uint8_t data_get[7] = {0,0,0,0,0,0,0}; 
+    uint8_t adrr_list[16];
+    if(addr>256){
+        data_send[1] = 0b0;//adress of 0
+        data_send[2] = addr;
+    }
+    if(addr<=256){
+        int i = 0;
+        int adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
+        while(addr > 0) {
+            adr_data[15-i] = addr % 2;  // Store remainder
+            addr /= 2;;  // Divide by 2 (this was a chat gpt find. i'm hoping that's ok)
+            //printf("Volt Data = %d \n\r", volt_data[9-i]);
+            i++;
+        }
+        data_send[1] = data_send[1] | (adr_data[0]<<7); 
+        data_send[1] = data_send[1] | (adr_data[1]<<6); 
+        data_send[1] = data_send[1] | (adr_data[2]<<5); 
+        data_send[1] = data_send[1] | (adr_data[3]<<4); 
+        data_send[1] = data_send[1] | (adr_data[4]<<3); 
+        data_send[1] = data_send[1] | (adr_data[5]<<2); 
+        data_send[1] = data_send[1] | (adr_data[6]<<1); 
+        data_send[1] = data_send[1] | (adr_data[7]<<0); 
+
+        data_send[2] = data_send[2] | (adr_data[8]<<7); 
+        data_send[2] = data_send[2] | (adr_data[9]<<6); 
+        data_send[2] = data_send[2] | (adr_data[10]<<5); 
+        data_send[2] = data_send[2] | (adr_data[11]<<4); 
+        data_send[2] = data_send[2] | (adr_data[12]<<3); 
+        data_send[2] = data_send[2] | (adr_data[13]<<2); 
+        data_send[2] = data_send[2] | (adr_data[14]<<1); 
+        data_send[2] = data_send[2] | (adr_data[15]<<0); 
+
+    }
+    data_send[0] = WRITEMODE;//read mode 
+    data_send[3] = (Val.i>>24)&0xFF;
+    data_send[4] = (Val.i>>16)&0xFF;
+    data_send[5] = (Val.i>>8)&0xFF;
+    data_send[6] = (Val.i>>8)&0xFF;
+
+    cs_select(PIN_CS_RAM);
+    spi_write_read_blocking(SPI_PORT, data_send, data_get,14);
+    cs_deselect(PIN_CS_RAM);
+}
