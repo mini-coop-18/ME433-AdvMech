@@ -56,7 +56,7 @@ static inline void cs_deselect(uint cs_pin) {
 }
 
 void SPI_SetUp(){
-    spi_init(SPI_PORT, WAVE_LEN*56*2); //myabe becasue 8*7 is 
+    spi_init(SPI_PORT, 1000 * 1000); //myabe becasue 8*7 is 
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_CS_DAC,   GPIO_FUNC_SIO);
     //gpio_set_function(PIN_CS_RAM,   GPIO_FUNC_SIO);
@@ -95,11 +95,11 @@ int main()
     make_Sin_Waveform();
     printf("Waveform Loaded In RAM\n");
 
-    for (int i = 0;i<WAVE_LEN;i++){
-        printf("\n At %d - We're Hoping For: %f \r\n", i, Sin_Waveform[i]);
-        sleep_ms(5);
-        int i_adj = i+MEM_START;
-        float voltage_rec = RAM_Get(i_adj);
+    for(int z = 0;z<WAVE_LEN;z++){
+        printf("\n At %d - We're Hoping For: %f \r\n", z, Sin_Waveform[z]);
+        sleep_ms(50);
+        int i_adj = z+MEM_START;
+        //float voltage_rec = RAM_Get(i_adj);
         //SendData_DAC(0, voltage_rec);         
     }
 
@@ -151,6 +151,7 @@ void RAM_Send(union FloatInt Val, int addr){
     uint8_t data_send[7] = {0,0,0,0,0,0,0};
     uint8_t data_get[7] = {0,0,0,0,0,0,0}; 
     int addr_val = addr;
+    printf("%d", addr);
     // int i = 0;
     //int adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
     // while(addr > 0) {
@@ -159,8 +160,8 @@ void RAM_Send(union FloatInt Val, int addr){
     //     //printf("Volt Data = %d \n\r", volt_data[9-i]);
     //     i++;
     // }
-    data_send[1] = (addr_val >> 8) & 0xFF;
-    data_send[2] = addr_val & 0xFF;
+    data_send[1] = (addr >> 8) & 0xFF;
+    data_send[2] = addr & 0xFF;
 
     // data_send[1] = data_send[1] | (adr_data[0]<<7); 
     // data_send[1] = data_send[1] | (adr_data[1]<<6); 
@@ -179,7 +180,7 @@ void RAM_Send(union FloatInt Val, int addr){
     // data_send[2] = data_send[2] | (adr_data[13]<<2); 
     // data_send[2] = data_send[2] | (adr_data[14]<<1); 
     // data_send[2] = data_send[2] | (adr_data[15]<<0); 
-    printf("Making the Address: %d = %b %b \n\r", addr_val, data_send[1], data_send[2]);
+    //printf("\n Making the Address: %d = %b %b \n\r", addr, data_send[1], data_send[2]);
 
     data_send[0] = WRITEMODE;//read mode 
     data_send[3] = (Val.i>>24)&0xFF;
@@ -198,9 +199,8 @@ void RAM_Send(union FloatInt Val, int addr){
 float RAM_Get(int addr){
     uint8_t data_send[7] = {0,0,0,0,0,0,0};
     data_send[0] = READMODE;//read mode 
-    int addr_val = addr;
     // int i = 0;
-    char adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
+    //char adr_data[16] = {0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0};  // Array to store binary digits
     // while(addr > 0) {
     //     adr_data[15-i] = addr % 2;  // Store remainder
     //     addr /= 2;;  // Divide by 2 (this was a chat gpt find. i'm hoping that's ok)
@@ -208,8 +208,8 @@ float RAM_Get(int addr){
     //     i++;
     // }
 
-    data_send[1] = (addr_val >> 8) & 0xFF;
-    data_send[2] = addr_val & 0xFF;
+    data_send[1] = (addr >> 8) & 0xFF;
+    data_send[2] = addr & 0xFF;
 
     // data_send[1] = data_send[1] | (adr_data[0]<<7); 
     // data_send[1] = data_send[1] | (adr_data[1]<<6); 
@@ -228,7 +228,7 @@ float RAM_Get(int addr){
     // data_send[2] = data_send[2] | (adr_data[13]<<2); 
     // data_send[2] = data_send[2] | (adr_data[14]<<1); 
     // data_send[2] = data_send[2] | (adr_data[15]<<0); 
-    printf("Making the Address: %d = %b %b \n\r", addr_val, data_send[1], data_send[2]);
+    // printf("Making the Address: %d = %b %b \n\r", addr, data_send[1], data_send[2]);
 
 
     uint8_t data_returned[7] = {0,0,0,0,0,0,0};
@@ -238,7 +238,7 @@ float RAM_Get(int addr){
     spi_write_read_blocking(SPI_PORT, data_send, data_returned,14);
     cs_deselect(PIN_CS_RAM);
     // printf("After Transfer:\n\r Sent: b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
-    printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+    //printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     
     union FloatInt Volt_Rec;
     Volt_Rec.i = 0; 
