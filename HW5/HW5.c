@@ -14,10 +14,10 @@
 #define PIN_SCK  18
 #define PIN_MOSI 19
 
-#define WAVE_LEN 10
+#define WAVE_LEN _u(10)
 #define WRITEMODE 0b00000010
 #define READMODE 0b00000011
-#define MEM_START 2000
+#define MEM_START 0
 
 union FloatInt { //"Double Cast" 
     float f; //4 Bites, SPI Write Fx Needs Bites (So Right Shit by 24)
@@ -94,14 +94,18 @@ int main()
     }
     make_Sin_Waveform();
     printf("Waveform Loaded In RAM\n");
-
-    for(int z = 0;z<WAVE_LEN;z++){
+    uint32_t z = 0;
+    printf("Start");
+    for(z = 0;z<WAVE_LEN;z++){
         printf("\n At %d - We're Hoping For: %f \r\n", z, Sin_Waveform[z]);
         sleep_ms(50);
-        int i_adj = z+MEM_START;
+        int z_adj = z+MEM_START;
         float voltage_rec;
-        voltage_rec = RAM_Get(i_adj);
-        //SendData_DAC(0, voltage_rec);         
+        voltage_rec = RAM_Get(z_adj);
+        SendData_DAC(0, voltage_rec);         
+    }
+    while(true){
+        sleep_ms(1);
     }
     return 0;
 }
@@ -152,7 +156,7 @@ void RAM_Send(union FloatInt Val, int addr){
     uint8_t data_send[7] = {0};
     uint8_t data_get[7] = {0}; 
     int addr_val = addr;
-    printf("%d", addr);
+    // printf("%d", addr);
     data_send[1] = (addr >> 8) & 0xFF;
     data_send[2] = addr & 0xFF;
     //printf("\n Making the Address: %d = %b %b \n\r", addr, data_send[1], data_send[2]);
@@ -164,7 +168,7 @@ void RAM_Send(union FloatInt Val, int addr){
     data_send[6] = (Val.i>>0)&0xFF;
 
     cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_send, data_get,14);
+    spi_write_read_blocking(SPI_PORT, data_send, data_get,7);
     cs_deselect(PIN_CS_RAM);
     // printf("Sent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
     // printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_get[0],data_get[1],data_get[2],data_get[3],data_get[4],data_get[5],data_get[6]);
@@ -182,7 +186,7 @@ float RAM_Get(int addr){
     // printf("Before Transfer:\n\rSent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
     // printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_send, data_returned,14);
+    spi_write_read_blocking(SPI_PORT, data_send, data_returned,7);
     cs_deselect(PIN_CS_RAM);
     printf("After Transfer:\n\r Sent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
     printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
