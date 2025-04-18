@@ -14,7 +14,7 @@
 #define PIN_SCK  18
 #define PIN_MOSI 19
 
-#define WAVE_LEN _u(10)
+#define WAVE_LEN 1000
 #define WRITEMODE 0b00000010
 #define READMODE 0b00000011
 #define MEM_START 0
@@ -27,19 +27,22 @@ union FloatInt { //"Double Cast"
 void SendData_DAC(int, float);
 float ReadData_RAM();
 void SendData_RAM();
-void RAM_Send(union FloatInt, int);
-float RAM_Get(int);
+void RAM_Send(union FloatInt, uint16_t);
+float RAM_Get(uint16_t);
 
 static volatile float Sin_Waveform[WAVE_LEN]; // waveforms
 
 
 void make_Sin_Waveform(){
     union FloatInt sin_wave;
-    for (int i=0; i<WAVE_LEN; i++){
-        Sin_Waveform[i] = 1.65*sin(i*4*3.14/(WAVE_LEN))+1.65; //done via a graphing calculator/trial and error
-        sin_wave.f = Sin_Waveform[i];
-        int i_adj = i+MEM_START;
-        RAM_Send(sin_wave,i_adj);
+    int i=0;
+    uint16_t i_adr = MEM_START;
+    for (i=0; i<WAVE_LEN; i++){
+        Sin_Waveform[i] = 1.65*sin(i*2*3.14/(WAVE_LEN))+1.65; //done via a graphing calculator/trial and error
+        sin_wave.f = Sin_Waveform[i]; 
+        RAM_Send(sin_wave,i_adr);
+
+        i_adr += sizeof(float);
     }
 }
 
@@ -56,7 +59,7 @@ static inline void cs_deselect(uint cs_pin) {
 }
 
 void SPI_SetUp(){
-    spi_init(SPI_PORT, 1000 * 1000); //myabe becasue 8*7 is 
+    spi_init(SPI_PORT, 10000*1000); 
     gpio_set_function(PIN_MISO, GPIO_FUNC_SPI);
     gpio_set_function(PIN_CS_DAC,   GPIO_FUNC_SIO);
     //gpio_set_function(PIN_CS_RAM,   GPIO_FUNC_SIO);
@@ -83,29 +86,28 @@ void spi_ram_init(){
     cs_deselect(PIN_CS_RAM);
 }
 
-
 int main()
 {
     stdio_init_all();
     SPI_SetUp();   
     spi_ram_init();
-    while (!stdio_usb_connected()) { //waiting for the screen to open the port 
-        sleep_ms(100);
-    }
     make_Sin_Waveform();
     printf("Waveform Loaded In RAM\n");
-    uint32_t z = 0;
     printf("Start");
-    for(z = 0;z<WAVE_LEN;z++){
-        printf("\n At %d - We're Hoping For: %f \r\n", z, Sin_Waveform[z]);
-        sleep_ms(50);
-        int z_adj = z+MEM_START;
-        float voltage_rec;
-        voltage_rec = RAM_Get(z_adj);
-        SendData_DAC(0, voltage_rec);         
-    }
     while(true){
-        sleep_ms(1);
+        int z = 0;
+        uint16_t z_adj = MEM_START;
+        for(z = 0;z<WAVE_LEN;z++){
+            //printf("\n At %d - We're Hoping For: %f \r\n", z, Sin_Waveform[z]);
+            // sleep_ms(5);
+            float voltage_rec;
+            voltage_rec = RAM_Get(z_adj);
+            //printf("And We're Sending: %f \n\r", voltage_rec);
+            // sleep_ms(5);
+            SendData_DAC(0, voltage_rec); 
+            z_adj += sizeof(float);
+            sleep_ms(1000/WAVE_LEN); //wait     
+        }  
     }
     return 0;
 }
@@ -117,7 +119,7 @@ void SendData_DAC(int chan, float volt){
     data[0] = data[0] | (chan << 7); //channel is the first bit 
     data[0] = data[0] | (0b111<<4); // Buffered, Gain, Shutdown 
     uint16_t volt_converted = 1024*volt/3.3;
-    printf("Voltage We're Shooting For: %f \r\n", volt);
+    //printf("Voltage We're Shooting For: %f \r\n", volt);
     //printf("Calculated Voltage Conversion: %u \r\n", volt_converted);
     int volt_data[10] = {0,0,0,0,0,0,0,0,0,0};  // Array to store binary digits
     int i = 0;
@@ -131,7 +133,7 @@ void SendData_DAC(int chan, float volt){
         //printf("Volt Data = %d \n\r", volt_data[9-i]);
         i++;
     }
-    printf("Volt Data = %d", volt_data);
+    // printf("Volt Data = %d", volt_data);
     data[0] = data[0] | (volt_data[0]<<3);
     data[0] = data[0] | (volt_data[1]<<2);
     data[0] = data[0] | (volt_data[2]<<1);
@@ -144,7 +146,7 @@ void SendData_DAC(int chan, float volt){
     data[1] = data[1] | (volt_data[7]<<4); 
     data[1] = data[1] | (volt_data[8]<<3); 
     data[1] = data[1] | (volt_data[9]<<2); 
-    printf("%b %b \r\n", data[0], data[1]);
+    // printf("%b %b \r\n", data[0], data[1]);
     cs_select(PIN_CS_DAC);
     spi_write_blocking(SPI_PORT, data, 2); // where data is a uint8_t array with length len
     cs_deselect(PIN_CS_DAC);
@@ -152,54 +154,50 @@ void SendData_DAC(int chan, float volt){
 
 
 
-void RAM_Send(union FloatInt Val, int addr){
+void RAM_Send(union FloatInt Val, uint16_t addr){
     uint8_t data_send[7] = {0};
     uint8_t data_get[7] = {0}; 
-    int addr_val = addr;
     // printf("%d", addr);
-    data_send[1] = (addr >> 8) & 0xFF;
-    data_send[2] = addr & 0xFF;
+    data_send[1] = (addr>>8);
+    data_send[2] = addr&0xFF;
     //printf("\n Making the Address: %d = %b %b \n\r", addr, data_send[1], data_send[2]);
 
     data_send[0] = WRITEMODE;//read mode 
     data_send[3] = (Val.i>>24)&0xFF;
     data_send[4] = (Val.i>>16)&0xFF;
     data_send[5] = (Val.i>>8)&0xFF;
-    data_send[6] = (Val.i>>0)&0xFF;
+    data_send[6] = (Val.i)&0xFF;
 
     cs_select(PIN_CS_RAM);
-    spi_write_read_blocking(SPI_PORT, data_send, data_get,7);
+    spi_write_blocking(SPI_PORT, data_send,7);
     cs_deselect(PIN_CS_RAM);
     // printf("Sent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
     // printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_get[0],data_get[1],data_get[2],data_get[3],data_get[4],data_get[5],data_get[6]);
     
 }
 
-float RAM_Get(int addr){
+float RAM_Get(uint16_t addr){
     uint8_t data_send[7] = {0};
     data_send[0] = READMODE;//read mode 
-    data_send[1] = (addr >> 8) & 0xFF;
-    data_send[2] = addr & 0xFF;
-    printf("Making the Address: %d = %b %b \n\r", addr, data_send[1], data_send[2]);
+    data_send[1] = (addr>>8);
+    data_send[2] = addr&0xFF;
+    //printf("Making the Address: %d = %b %b \n\r", addr, data_send[1], data_send[2]);
 
     uint8_t data_returned[7] = {0};
-    // printf("Before Transfer:\n\rSent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
+    //printf("Before Transfer:\n\rSent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
     // printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     cs_select(PIN_CS_RAM);
     spi_write_read_blocking(SPI_PORT, data_send, data_returned,7);
     cs_deselect(PIN_CS_RAM);
-    printf("After Transfer:\n\r Sent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
-    printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
+    // printf("After Transfer:\n\r Sent: %b   %b   %b   %b   %b   %b   %b \n\r", data_send[0],data_send[1],data_send[2],data_send[3],data_send[4],data_send[5],data_send[6]);
+    //printf("Returned: %b   %b   %b   %b   %b   %b   %b   \n\r", data_returned[0],data_returned[1],data_returned[2],data_returned[3],data_returned[4],data_returned[5],data_returned[6]);
     
     union FloatInt Volt_Rec;
     Volt_Rec.i = 0; 
-    Volt_Rec.i |= (data_returned[3]&0xFF)<<24;
-    Volt_Rec.i |=  (data_returned[4]&0xFF)<<16;
-    Volt_Rec.i |=  (data_returned[5]&0xFF)<<8;
-    Volt_Rec.i |= (data_returned[6]&0xFF);
-    int Volt_Rec_i = Volt_Rec.i;
+    Volt_Rec.i = (data_returned[3])<<24 | (data_returned[4])<<16| (data_returned[5])<<8| (data_returned[6]);
+    //int Volt_Rec_i = Volt_Rec.i;
     // printf("%d \n", Volt_Rec_i);
-    float Volt_Rec_f = Volt_Rec.f;
-    printf("We're Getting Back: %.2f \n\r", Volt_Rec_f);
-    return Volt_Rec_f;
+    //float Volt_Rec_f = Volt_Rec.f;
+    //printf("We're Getting Back: %.2f \n\r", Volt_Rec_f);
+    return Volt_Rec.f;
 }
