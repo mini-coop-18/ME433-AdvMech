@@ -10,13 +10,47 @@
 #define I2C_SCL 13
 
 #define ADDR  0b0100000
+#define DIR_REG 0b00000001
 
-void I2C_Send_Data()
-void I2C_Read_Data()
+
+#define LED_DELAY_MS 1000
+
+
+void I2C_Send_Data_init();
+void I2C_Read_Data(uint8_t buf, uint8_t reg);
+void I2C_LX_On();
+void I2C_LX_Off();
+int I2C_Button_Read();
+
+int pico_led_init(void) {
+    #if defined(PICO_DEFAULT_LED_PIN)
+        // A device like Pico that uses a GPIO for the LED will define PICO_DEFAULT_LED_PIN
+        // so we can use normal GPIO functionality to turn the led on and off
+        gpio_init(PICO_DEFAULT_LED_PIN);
+        gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
+        return PICO_OK;
+    #elif defined(CYW43_WL_GPIO_LED_PIN)
+        // For Pico W devices we need to initialise the driver etc
+        return cyw43_arch_init();
+    #endif
+    }
+
+void pico_set_led(bool led_on) {
+    #if defined(PICO_DEFAULT_LED_PIN)
+        // Just set the GPIO on or off
+        gpio_put(PICO_DEFAULT_LED_PIN, led_on);
+    #elif defined(CYW43_WL_GPIO_LED_PIN)
+        // Ask the wifi "driver" to set the GPIO on or off
+        cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, led_on);
+    #endif
+    }
 
 int main()
 {
     stdio_init_all();
+
+    int rc = pico_led_init();
+    hard_assert(rc == PICO_OK);
 
     // I2C Initialisation. Using it at 400Khz.
     i2c_init(I2C_PORT, 400*1000);
@@ -25,18 +59,54 @@ int main()
     gpio_pull_up(I2C_SDA);
     gpio_pull_up(I2C_SCL);
     // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
-
+    I2C_Send_Data_init();
     while (true) {
-        printf("Hello, world!\n");
-        sleep_ms(1000);
+            while(I2C_Button_Read() == 1){
+                I2C_LX_On();
+                sleep_ms(LED_DELAY_MS);
+            }
+            
+            I2C_LX_Off();
+            pico_set_led(true); 
+            sleep_ms(LED_DELAY_MS);
+            pico_set_led(false);
+            sleep_ms(LED_DELAY_MS);
     }
 }
 
-void I2C_Send_Data(){
+void I2C_Send_Data_init(void){
+    uint8_t buf[2]; 
+    buf[0] = 0x00; //IODIR 
+    buf[1] = DIR_REG;
     i2c_write_blocking(i2c_default, ADDR, buf, 2, false);
 }
 
-void I2C_Read_Data(){
-    i2c_write_blocking(i2c_default, ADDR, &reg, 1, true);  // true to keep master control of bus
-    i2c_read_blocking(i2c_default, ADDR, &buf, 1, false);  // false - finished with bus
+void I2C_LX_On(){
+    uint8_t buf[2]; 
+    buf[0] = 0x09; //GPIO Register
+    buf[1] = 0b10000000; //Turning the LX on 
+    i2c_write_blocking(i2c_default, ADDR, buf, 2, false);
+}
+
+void I2C_LX_Off(){
+    uint8_t buf[2]; 
+    buf[0] = 0x09; //GPIO Register
+    buf[1] = 0b00000000; //Turning the LX on 
+    i2c_write_blocking(i2c_default, ADDR, buf, 2, false);
+}
+
+int I2C_Button_Read(){
+    uint8_t buf[2]; 
+    uint8_t reg[2];
+
+    reg[0] = 0x09; 
+
+    i2c_write_blocking(i2c_default, ADDR, reg, 1, true);  // true to keep master control of bus
+    i2c_read_blocking(i2c_default, ADDR, buf, 1, false);  // false - finished with bus
+
+    uint16_t upper_byte = buf[0];
+    //uint16_t lower_byte = buf[1];
+    printf("%b \n\r", upper_byte);
+    //printf("%b \n\r\n\n", lower_byte);
+    return upper_byte;
 }
