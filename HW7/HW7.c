@@ -11,6 +11,10 @@
 #define I2C_SDA 12  
 #define I2C_SCL 13
 
+void draw_my_message(char x, char y, char *message);
+void draw_a_letter(char x, char y, char letter);
+
+
 int pico_led_init(void) {
     #if defined(PICO_DEFAULT_LED_PIN)
         // A device like Pico that uses a GPIO for the LED will define PICO_DEFAULT_LED_PIN
@@ -51,21 +55,39 @@ int main()
     gpio_pull_up(I2C_SDA);
     gpio_pull_up(I2C_SCL);
 
+    // while (!stdio_usb_connected()) { //waiting for the screen to open the port 
+    //     sleep_ms(100);
+    // }
     ssd1306_setup();
+    char my_text[50]; 
+    sprintf(my_text, "Hi Grace!");
+    printf("Printing %s \n\r", my_text);
+    char x = 10;
+    char y = 10;
+    draw_my_message(x,y,my_text);
 
-    // // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
-    ssd1306_drawPixel(10, 8, 1);
-    ssd1306_drawPixel(10, 7, 1);
-    ssd1306_drawPixel(10, 6, 1);
-    ssd1306_drawPixel(10, 5, 1);
-    ssd1306_drawPixel(10, 4, 1);
-    ssd1306_drawPixel(10, 3, 1);
-    ssd1306_drawPixel(10, 2, 1);
-    ssd1306_drawPixel(10, 1, 1);
-   
-    ssd1306_update();
-
-    
     while (true) {
+    }
+}
+
+void draw_my_message(char x, char y, char* message){
+    int i = 0 ;
+    ssd1306_clear();
+	while(message[i] != 0){ // while it’s not 0 
+        draw_a_letter(x+5*i, y, message[i]);
+        i++;
+    }
+    ssd1306_update();
+}
+
+void draw_a_letter(char x, char y, char letter){
+    int i, j; 
+    for (i = 0; i<5; i++){
+        char col = ASCII[letter-32][i];
+        for (j = 0; j<8; j++){
+            char on = (col>>j)&0b1;
+            printf("letter -- %s. Bit %d x %d =  %b \n\r", letter, i, j, on);
+            ssd1306_drawPixel(x+i,y+j,on);
+        }
     }
 }
