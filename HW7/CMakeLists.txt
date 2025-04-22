@@ -34,7 +34,6 @@ project(HW7 C CXX ASM)
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
-
 add_executable(HW7 HW7.c ssd1306.c)
 
 pico_set_program_name(HW7 "HW7")
