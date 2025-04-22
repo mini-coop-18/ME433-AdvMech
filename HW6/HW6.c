@@ -61,14 +61,18 @@ int main()
     // For more examples of I2C use see https://github.com/raspberrypi/pico-examples/tree/master/i2c
     I2C_Send_Data_init();
     while (true) {
-            while(I2C_Button_Read() == 1){
+            while(I2C_Button_Read()>0){
                 I2C_LX_On();
                 sleep_ms(LED_DELAY_MS);
             }
-            
             I2C_LX_Off();
             pico_set_led(true); 
             sleep_ms(LED_DELAY_MS);
+            while(I2C_Button_Read()>0){
+                I2C_LX_On();
+                sleep_ms(LED_DELAY_MS);
+            }
+            I2C_LX_Off();
             pico_set_led(false);
             sleep_ms(LED_DELAY_MS);
     }
@@ -96,17 +100,16 @@ void I2C_LX_Off(){
 }
 
 int I2C_Button_Read(){
-    uint8_t buf[2]; 
-    uint8_t reg[2];
+    uint8_t buf[1]; 
+    uint8_t reg[1];
 
-    reg[0] = 0x09; 
+    reg[0] = 0x09; //GPIO register
 
     i2c_write_blocking(i2c_default, ADDR, reg, 1, true);  // true to keep master control of bus
     i2c_read_blocking(i2c_default, ADDR, buf, 1, false);  // false - finished with bus
 
-    uint16_t upper_byte = buf[0];
-    //uint16_t lower_byte = buf[1];
-    printf("%b \n\r", upper_byte);
+    int button_byte = (buf[0]<<7)&0xFF; 
+    printf("%d \n\r", button_byte);
     //printf("%b \n\r\n\n", lower_byte);
-    return upper_byte;
+    return button_byte; 
 }
