@@ -28,6 +28,7 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
+
 project(pio_ws2812 C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
@@ -44,8 +45,8 @@ pico_generate_pio_header(pio_ws2812 ${CMAKE_CURRENT_LIST_DIR}/ws2812.pio OUTPUT_
 
 target_sources(pio_ws2812 PRIVATE ws2812.c)
 
-target_link_libraries(pio_ws2812 PRIVATE pico_stdlib hardware_pio)
-pico_add_extra_outputs(pio_ws2812)
+target_link_libraries(pio_ws2812 PRIVATE pico_stdlib hardware_pio hardware_pwm)
+pico_add_extra_outputs(pio_ws2812) 
 
 # add url via pico_set_program_url
 
