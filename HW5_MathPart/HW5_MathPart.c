@@ -7,6 +7,8 @@ int main()
     stdio_init_all();
 
     while (true) {
+        absolute_time_t t1 = get_absolute_time();
+
         volatile float f1, f2;
         volatile float f_add, f_sub, f_mult, f_div;
 
