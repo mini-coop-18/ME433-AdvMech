@@ -48,3 +48,6 @@ target_link_libraries(hello_multicore
 pico_add_extra_outputs(hello_multicore)
 
 # add url via pico_set_program_url
+
+pico_enable_stdio_uart(hello_multicore 0)
+pico_enable_stdio_usb(hello_multicore 1)
