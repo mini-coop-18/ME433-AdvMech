@@ -16,7 +16,7 @@ else()
     set(USERHOME $ENV{HOME})
 endif()
 set(sdkVersion 2.1.1)
-set(toolchainVersion 14_2_Rel1)
+set(toolchainVersion 13_2_Rel1)
 set(picotoolVersion 2.1.1)
 set(picoVscode ${USERHOME}/.pico-sdk/cmake/pico-vscode.cmake)
 if (EXISTS ${picoVscode})
@@ -42,7 +42,8 @@ add_executable(hello_multicore
 # Add pico_multicore which is required for multicore functionality
 target_link_libraries(hello_multicore
         pico_stdlib
-        pico_multicore)
+        pico_multicore
+        hardware_adc)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(hello_multicore)
