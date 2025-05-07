@@ -29,8 +29,14 @@
 
 #include "bsp/board_api.h"
 #include "tusb.h"
+#include "hardware/gpio.h"
 
 #include "usb_descriptors.h"
+
+#define UP_BUTTON 14
+#define LEFT_BUTTON 15
+#define DOWN_BUTTON 17
+#define RIGHT_BUTTON 16
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -52,6 +58,14 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 void led_blinking_task(void);
 void hid_task(void);
 
+static volatile float X_Circle_Waveform[1000]; // waveforms
+static volatile float Y_Circle_Waveform[1000]; 
+
+void make_circle(void){
+
+}
+
+
 /*------------- MAIN -------------*/
 int main(void)
 {
@@ -60,7 +74,7 @@ int main(void)
   // init device stack on configured roothub port
   tud_init(BOARD_TUD_RHPORT);
 
-  if (board_init_after_tusb) {
+  if (board_init_after_tusb) { //wait for computer to reconize the usb is plugged in 
     board_init_after_tusb();
   }
 
@@ -220,7 +234,7 @@ void hid_task(void)
   }else
   {
     // Send the 1st of report chain, the rest will be sent by tud_hid_report_complete_cb()
-    send_hid_report(REPORT_ID_KEYBOARD, btn);
+    send_hid_report(REPORT_ID_MOUSE, btn);
   }
 }
 
@@ -303,4 +317,27 @@ void led_blinking_task(void)
 
   board_led_write(led_state);
   led_state = 1 - led_state; // toggle
+}
+
+
+void button_init(){
+  gpio_init(UP_BUTTON);  
+  gpio_set_dir(UP_BUTTON, GPIO_IN);    
+  gpio_pull_up(UP_BUTTON); 
+  
+  gpio_init(LEFT_BUTTON);  
+  gpio_set_dir(LEFT_BUTTON, GPIO_IN);    
+  gpio_pull_up(LEFT_BUTTON);
+  
+  gpio_init(RIGHT_BUTTON);  
+  gpio_set_dir(RIGHT_BUTTON, GPIO_IN);    
+  gpio_pull_up(RIGHT_BUTTON);
+
+  gpio_init(DOWN_BUTTON);  
+  gpio_set_dir(DOWN_BUTTON, GPIO_IN);    
+  gpio_pull_up(DOWN_BUTTON);
+  return;
+}
+int button_control(){
+  
 }
