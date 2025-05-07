@@ -31,12 +31,18 @@
 #include "tusb.h"
 #include "hardware/gpio.h"
 
+#include <math.h>  
+
 #include "usb_descriptors.h"
 
 #define UP_BUTTON 14
 #define LEFT_BUTTON 15
 #define DOWN_BUTTON 17
 #define RIGHT_BUTTON 16
+
+#define CIR_LEN 2000
+#define CIR_RAD 100
+#define CIR_OFF 0 
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -61,28 +67,29 @@ void hid_task(void);
 void button_init(void);
 void button_control(void);
 
-static volatile float X_Circle_Waveform[1000]; // waveforms
-static volatile float Y_Circle_Waveform[1000]; 
+static volatile float X_Circle_Waveform[2*CIR_LEN]; // waveforms
+static volatile float Y_Circle_Waveform[2*CIR_LEN]; 
 
 static volatile int x_control;
 static volatile int y_control;
 
 void make_circle(void){
-  for (int i = 0; i<1000/4; i++){
-    X_Circle_Waveform[i] = i;
-    Y_Circle_Waveform[i] = 10;
+  for(int i = 0; i<CIR_LEN;i++){
+    float X_Val = (float)i*(2*CIR_RAD)/CIR_LEN;
+    X_Circle_Waveform[i] = X_Val;
+    float inside = CIR_RAD*CIR_RAD-(X_Val-CIR_OFF)*(X_Val-CIR_OFF);
+    float Y_Val = sqrt(inside)-CIR_OFF;
+    Y_Circle_Waveform[i] = Y_Val;
+  //   printf("%i -- %f \t %f\n\r", i, X_Val, Y_Val);
   }
-  for (int i = 0; i<1000/4; i++){
-    Y_Circle_Waveform[i+1000/4] = 10-i;
-    X_Circle_Waveform[i+1000/4] = 1000/4;
-  }
-  for (int i = 0; i<1000/4; i++){
-    X_Circle_Waveform[i+1000/2] = 1000/3-i;
-    Y_Circle_Waveform[i+1000/2] = 10 - 1000/4;
-  }
-  for (int i = 0; i<1000/4; i++){
-    Y_Circle_Waveform[i+3*1000/4] = 1000-i;
-    X_Circle_Waveform[i+3*1000/4] = 0;
+
+  for(int i = 0;i<CIR_LEN;i++){
+    float X_Val = (CIR_LEN-(float)i)*(2*CIR_RAD)/CIR_LEN;
+    X_Circle_Waveform[i+500] = X_Val;
+    float inside = CIR_RAD*CIR_RAD-(X_Val-CIR_OFF)*(X_Val-CIR_OFF);
+    float Y_Val = -1*sqrt(inside)-CIR_OFF;
+    Y_Circle_Waveform[i+500] = Y_Val;
+  //   printf("%i -- %f \t %f\n\r", i, X_Val, Y_Val);
   }
 }
 
@@ -103,16 +110,17 @@ int main(void)
     board_init_after_tusb();
   }
   int Mode_Case = 1;
+  make_circle();
   while (1)
   {
     // printf("In the While Loop");
-    tud_task(); // tinyusb device task
-    led_blinking_task();
-    hid_task();
     // button_control();
-    for(int i = 1;i<1000;i++){
-      x_control = X_Circle_Waveform[i]-X_Circle_Waveform[i-1];
-      y_control = Y_Circle_Waveform[i]-Y_Circle_Waveform[i-1];
+    for(int i = 1;i<CIR_LEN*2;i++){
+      x_control = round(X_Circle_Waveform[i]-X_Circle_Waveform[i-1]);
+      y_control = round(Y_Circle_Waveform[i]-Y_Circle_Waveform[i-1]);
+      tud_task(); // tinyusb device task
+      led_blinking_task();
+      hid_task();
     }
   }
 }
@@ -227,7 +235,7 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
     case REPORT_ID_MOUSE:
     {
       // no button, right + down, no scroll, no pan
-      int delta = 5;
+      //int delta = 5;
       tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, x_control, y_control, 0, 0);
     }
     break;
