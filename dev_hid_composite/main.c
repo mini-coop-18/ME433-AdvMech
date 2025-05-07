@@ -57,6 +57,8 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
 void led_blinking_task(void);
 void hid_task(void);
+void button_init(void);
+void button_contro(void);
 
 static volatile float X_Circle_Waveform[1000]; // waveforms
 static volatile float Y_Circle_Waveform[1000]; 
@@ -338,6 +340,26 @@ void button_init(){
   gpio_pull_up(DOWN_BUTTON);
   return;
 }
-int button_control(){
-  
+void button_control(){
+    int x_control;
+    int y_control;
+
+    if(gpio_get(UP_BUTTON) == 0){ 
+      y_control = y_control - 1;
+    }
+    else if(gpio_get(DOWN_BUTTON) == 0){
+      y_control = y_control + 1;
+    }
+    else{
+      y_control = 0;
+    }
+    if (gpio_get(RIGHT_BUTTON) == 0){
+      x_control = x_control+1; 
+    }
+    else if(gpio_get(LEFT_BUTTON) == 0){
+      x_control = x_control+1;
+    }
+    else{
+      x_control = 0;
+    }
 }
