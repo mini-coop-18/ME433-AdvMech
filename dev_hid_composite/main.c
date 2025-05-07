@@ -35,14 +35,18 @@
 
 #include "usb_descriptors.h"
 
-#define UP_BUTTON 14
-#define LEFT_BUTTON 15
+#define UP_BUTTON 15
+#define LEFT_BUTTON 14
+
 #define DOWN_BUTTON 17
 #define RIGHT_BUTTON 16
 
-#define CIR_LEN 2000
-#define CIR_RAD 100
-#define CIR_OFF 0 
+#define MODE_BUTTON 13
+#define LED_PIN 12
+
+#define CIR_LEN 500
+#define CIR_RAD 500
+#define CIR_OFF 500
 
 //--------------------------------------------------------------------+
 // MACRO CONSTANT TYPEDEF PROTYPES
@@ -70,8 +74,8 @@ void button_control(void);
 static volatile float X_Circle_Waveform[2*CIR_LEN]; // waveforms
 static volatile float Y_Circle_Waveform[2*CIR_LEN]; 
 
-static volatile int x_control;
-static volatile int y_control;
+volatile int8_t x_control;
+volatile int8_t y_control;
 
 void make_circle(void){
   for(int i = 0; i<CIR_LEN;i++){
@@ -81,14 +85,15 @@ void make_circle(void){
     float Y_Val = sqrt(inside)-CIR_OFF;
     Y_Circle_Waveform[i] = Y_Val;
   //   printf("%i -- %f \t %f\n\r", i, X_Val, Y_Val);
+  
   }
 
   for(int i = 0;i<CIR_LEN;i++){
     float X_Val = (CIR_LEN-(float)i)*(2*CIR_RAD)/CIR_LEN;
-    X_Circle_Waveform[i+500] = X_Val;
+    X_Circle_Waveform[i+CIR_LEN] = X_Val;
     float inside = CIR_RAD*CIR_RAD-(X_Val-CIR_OFF)*(X_Val-CIR_OFF);
     float Y_Val = -1*sqrt(inside)-CIR_OFF;
-    Y_Circle_Waveform[i+500] = Y_Val;
+    Y_Circle_Waveform[i+CIR_LEN] = Y_Val;
   //   printf("%i -- %f \t %f\n\r", i, X_Val, Y_Val);
   }
 }
@@ -104,29 +109,45 @@ int main(void)
 
   // init device stack on configured roothub port
   tud_init(BOARD_TUD_RHPORT);
-  // button_init();
+  button_init();
   // printf("Init Board is Done");
   if (board_init_after_tusb) { //wait for computer to reconize the usb is plugged in 
     board_init_after_tusb();
   }
-  int Mode_Case = 1;
   make_circle();
   while (1)
-  {
-    // printf("In the While Loop");
-    // button_control();
-    for(int i = 1;i<CIR_LEN*2;i++){
-      x_control = round(X_Circle_Waveform[i]-X_Circle_Waveform[i-1]);
-      y_control = round(Y_Circle_Waveform[i]-Y_Circle_Waveform[i-1]);
-      tud_task(); // tinyusb device task
-      led_blinking_task();
-      hid_task();
+  {      
+    tud_task(); // tinyusb device task
+    led_blinking_task();
+    x_control = 0; 
+    y_control = 0;
+
+    if(gpio_get(MODE_BUTTON) == 0){
+      gpio_put(LED_PIN, 0);
+      for(int i = 1;i<CIR_LEN*2;i++){
+        x_control = round(X_Circle_Waveform[i]-X_Circle_Waveform[i-1]);
+        y_control = round(Y_Circle_Waveform[i]-Y_Circle_Waveform[i-1]);
+        if (y_control>5){
+          y_control = 4;
+        }
+        if (x_control>5){
+          x_control = 4;
+        }
+        // sleep_ms(100);
+        hid_task();        
+      }
+    }
+    gpio_put(LED_PIN, 1);
+    button_control();
     }
   }
-}
 
 
 void button_init(void){
+  gpio_init(LED_PIN);
+  gpio_set_dir(LED_PIN, GPIO_OUT);
+  gpio_put(LED_PIN, 0);
+
   gpio_init(UP_BUTTON);  
   gpio_set_dir(UP_BUTTON, GPIO_IN);    
   gpio_pull_up(UP_BUTTON); 
@@ -142,33 +163,35 @@ void button_init(void){
   gpio_init(DOWN_BUTTON);  
   gpio_set_dir(DOWN_BUTTON, GPIO_IN);    
   gpio_pull_up(DOWN_BUTTON);
+
+  gpio_init(MODE_BUTTON);  
+  gpio_set_dir(MODE_BUTTON, GPIO_IN);    
+  gpio_pull_up(MODE_BUTTON);
   // return;
 }
 
-void button_control(void){
-    if(gpio_get(UP_BUTTON) == 0){ 
-      y_control = y_control - 1;
-    }
-    else if(gpio_get(DOWN_BUTTON) == 0){
-      y_control = y_control + 1;
-    }
-    else{
-      y_control = 0;
-    }
-    if (gpio_get(RIGHT_BUTTON) == 0){
-      x_control = x_control+1; 
-    }
-    else if(gpio_get(LEFT_BUTTON) == 0){
-      x_control = x_control+1;
-    }
-    else{
-      x_control = 0;
-    }
-    tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, x_control, y_control, 0, 0);
-    // return;
+void button_control(void){  
+  if(gpio_get(UP_BUTTON) == 0){ 
+    y_control = y_control - 1;
+  }
+  else if(gpio_get(DOWN_BUTTON) == 0){
+    y_control = y_control + 1;
+  }
+  else{
+    y_control = 0;
+  }
+  if (gpio_get(RIGHT_BUTTON) == 0){
+    x_control = x_control+1; 
+  }
+  else if(gpio_get(LEFT_BUTTON) == 0){
+    x_control = x_control-1;
+  }
+  else{
+    x_control = 0;
+  }
+  hid_task();
+  // return;}
 }
-
-
 //--------------------------------------------------------------------+
 // Device callbacks
 //--------------------------------------------------------------------+
@@ -235,7 +258,7 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
     case REPORT_ID_MOUSE:
     {
       // no button, right + down, no scroll, no pan
-      //int delta = 5;
+      int delta = -5;
       tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, x_control, y_control, 0, 0);
     }
     break;
