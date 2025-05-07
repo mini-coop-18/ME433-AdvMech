@@ -26,7 +26,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
+#include "pico/stdlib.h"
 #include "bsp/board_api.h"
 #include "tusb.h"
 #include "hardware/gpio.h"
@@ -57,37 +57,109 @@ static uint32_t blink_interval_ms = BLINK_NOT_MOUNTED;
 
 void led_blinking_task(void);
 void hid_task(void);
+
 void button_init(void);
-void button_contro(void);
+void button_control(void);
 
 static volatile float X_Circle_Waveform[1000]; // waveforms
 static volatile float Y_Circle_Waveform[1000]; 
 
-void make_circle(void){
+static volatile int x_control;
+static volatile int y_control;
 
+void make_circle(void){
+  for (int i = 0; i<1000/4; i++){
+    X_Circle_Waveform[i] = i;
+    Y_Circle_Waveform[i] = 10;
+  }
+  for (int i = 0; i<1000/4; i++){
+    Y_Circle_Waveform[i+1000/4] = 10-i;
+    X_Circle_Waveform[i+1000/4] = 1000/4;
+  }
+  for (int i = 0; i<1000/4; i++){
+    X_Circle_Waveform[i+1000/2] = 1000/3-i;
+    Y_Circle_Waveform[i+1000/2] = 10 - 1000/4;
+  }
+  for (int i = 0; i<1000/4; i++){
+    Y_Circle_Waveform[i+3*1000/4] = 1000-i;
+    X_Circle_Waveform[i+3*1000/4] = 0;
+  }
 }
 
 
 /*------------- MAIN -------------*/
 int main(void)
 {
+  // while (!stdio_usb_connected()) { //waiting for the screen to open the port 
+  //   sleep_ms(100);
+  // }
   board_init();
 
   // init device stack on configured roothub port
   tud_init(BOARD_TUD_RHPORT);
-
+  // button_init();
+  // printf("Init Board is Done");
   if (board_init_after_tusb) { //wait for computer to reconize the usb is plugged in 
     board_init_after_tusb();
   }
-
+  int Mode_Case = 1;
   while (1)
   {
+    // printf("In the While Loop");
     tud_task(); // tinyusb device task
     led_blinking_task();
-
     hid_task();
+    // button_control();
+    for(int i = 1;i<1000;i++){
+      x_control = X_Circle_Waveform[i]-X_Circle_Waveform[i-1];
+      y_control = Y_Circle_Waveform[i]-Y_Circle_Waveform[i-1];
+    }
   }
 }
+
+
+void button_init(void){
+  gpio_init(UP_BUTTON);  
+  gpio_set_dir(UP_BUTTON, GPIO_IN);    
+  gpio_pull_up(UP_BUTTON); 
+  
+  gpio_init(LEFT_BUTTON);  
+  gpio_set_dir(LEFT_BUTTON, GPIO_IN);    
+  gpio_pull_up(LEFT_BUTTON);
+  
+  gpio_init(RIGHT_BUTTON);  
+  gpio_set_dir(RIGHT_BUTTON, GPIO_IN);    
+  gpio_pull_up(RIGHT_BUTTON);
+
+  gpio_init(DOWN_BUTTON);  
+  gpio_set_dir(DOWN_BUTTON, GPIO_IN);    
+  gpio_pull_up(DOWN_BUTTON);
+  // return;
+}
+
+void button_control(void){
+    if(gpio_get(UP_BUTTON) == 0){ 
+      y_control = y_control - 1;
+    }
+    else if(gpio_get(DOWN_BUTTON) == 0){
+      y_control = y_control + 1;
+    }
+    else{
+      y_control = 0;
+    }
+    if (gpio_get(RIGHT_BUTTON) == 0){
+      x_control = x_control+1; 
+    }
+    else if(gpio_get(LEFT_BUTTON) == 0){
+      x_control = x_control+1;
+    }
+    else{
+      x_control = 0;
+    }
+    tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, x_control, y_control, 0, 0);
+    // return;
+}
+
 
 //--------------------------------------------------------------------+
 // Device callbacks
@@ -154,10 +226,9 @@ static void send_hid_report(uint8_t report_id, uint32_t btn)
 
     case REPORT_ID_MOUSE:
     {
-      int8_t const delta = 5;
-
       // no button, right + down, no scroll, no pan
-      tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, delta, delta, 0, 0);
+      int delta = 5;
+      tud_hid_mouse_report(REPORT_ID_MOUSE, 0x00, x_control, y_control, 0, 0);
     }
     break;
 
@@ -321,45 +392,3 @@ void led_blinking_task(void)
   led_state = 1 - led_state; // toggle
 }
 
-
-void button_init(){
-  gpio_init(UP_BUTTON);  
-  gpio_set_dir(UP_BUTTON, GPIO_IN);    
-  gpio_pull_up(UP_BUTTON); 
-  
-  gpio_init(LEFT_BUTTON);  
-  gpio_set_dir(LEFT_BUTTON, GPIO_IN);    
-  gpio_pull_up(LEFT_BUTTON);
-  
-  gpio_init(RIGHT_BUTTON);  
-  gpio_set_dir(RIGHT_BUTTON, GPIO_IN);    
-  gpio_pull_up(RIGHT_BUTTON);
-
-  gpio_init(DOWN_BUTTON);  
-  gpio_set_dir(DOWN_BUTTON, GPIO_IN);    
-  gpio_pull_up(DOWN_BUTTON);
-  return;
-}
-void button_control(){
-    int x_control;
-    int y_control;
-
-    if(gpio_get(UP_BUTTON) == 0){ 
-      y_control = y_control - 1;
-    }
-    else if(gpio_get(DOWN_BUTTON) == 0){
-      y_control = y_control + 1;
-    }
-    else{
-      y_control = 0;
-    }
-    if (gpio_get(RIGHT_BUTTON) == 0){
-      x_control = x_control+1; 
-    }
-    else if(gpio_get(LEFT_BUTTON) == 0){
-      x_control = x_control+1;
-    }
-    else{
-      x_control = 0;
-    }
-}

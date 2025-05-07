@@ -58,3 +58,6 @@ target_link_libraries(dev_hid_composite PUBLIC pico_stdlib pico_unique_id tinyus
 pico_add_extra_outputs(dev_hid_composite)
 
 # add url via pico_set_program_url
+
+# pico_enable_stdio_uart(dev_hid_composite 0)
+# pico_enable_stdio_usb(dev_hid_composite 1)
