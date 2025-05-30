@@ -12,6 +12,9 @@
 #define RIGHT_BLINKER 20
 #define RIGHT_PHASE 21
 
+void left_wheel_control();
+void right_wheel_control();
+
 
 void init_left_side(void){
     gpio_init(LEFT_PHASE); 
@@ -64,13 +67,65 @@ int main()
     int right_dc = 50; 
     uint16_t wrap = 50000;
     while (true) {
-        printf("Left or Right Sir?");
-        char dir_msg[2];
-        scanf("%c", dir_msg);
-        if (dir_msg == "r"){
+        printf("Are We Turning Left or Right?");
+        char dir_msg;
+        scanf("%c", &dir_msg);
+        printf("\n%c\n", dir_msg);
+        if (dir_msg == '+'){
+            printf("Turning Left (More Right Wheel Less Left Wheel\n\r");
             right_dc = right_dc + 10; 
-            pwm_set_gpio_level(RIGHT_WHEEL, wrap*right_dc/100); // set the duty cycle to 50%
-            pwm_set_gpio_level(LEFT_WHEEL, 0); 
+            right_wheel_control(right_dc);
+            left_dc = left_dc - 10;
+            left_wheel_control(left_dc);
+            printf("The Right Wheel Duty Cycle is Now: %d Percent \n\r",right_dc);
+            printf("The Left Wheel Duty Cycle is Now: %d Percent \n\r",left_dc);
         }
+        if (dir_msg == '-'){
+            printf("Turning Right (More Left Wheel Less Right Wheel\n\r");
+            right_dc = right_dc - 10; 
+            right_wheel_control(right_dc);
+            left_dc = left_dc + 10;
+            left_wheel_control(left_dc);
+            printf("The Right Wheel Duty Cycle is Now: %d Percent \n\r",right_dc);
+            printf("The Left Wheel Duty Cycle is Now: %d Percent \n\r",left_dc);
+        }
+    }
+}
+
+void left_wheel_control(int duty_cycle){
+    uint16_t wrap = 50000;
+    if(duty_cycle>100){
+        duty_cycle = 100;
+    }
+    if (duty_cycle<-100){
+        duty_cycle = -100;
+    }
+    if (duty_cycle>0){
+        gpio_put(LEFT_PHASE, 0);
+        pwm_set_gpio_level(LEFT_WHEEL, wrap*duty_cycle/100); 
+    }
+    if (duty_cycle<=0){
+        gpio_put(LEFT_PHASE, 1);
+        duty_cycle = -1*duty_cycle;
+        pwm_set_gpio_level(LEFT_WHEEL, wrap*duty_cycle/100); 
+    }
+}
+
+void right_wheel_control(int duty_cycle){
+    uint16_t wrap = 50000;
+        if(duty_cycle>100){
+        duty_cycle = 100;
+    }
+    if (duty_cycle<-100){
+        duty_cycle = -100;
+    }
+    if (duty_cycle>0){
+        gpio_put(RIGHT_PHASE, 0);
+        pwm_set_gpio_level(RIGHT_WHEEL, wrap*duty_cycle/100); 
+    }
+    if (duty_cycle<=0){
+        gpio_put(RIGHT_PHASE, 1);
+        duty_cycle = -1*duty_cycle;
+        pwm_set_gpio_level(RIGHT_WHEEL, wrap*duty_cycle/100); 
     }
 }
