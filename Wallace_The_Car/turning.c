@@ -2,19 +2,16 @@
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
+#include "turning.h"
+#define TURN_TOL 0
 
-
-#define LEFT_BLINKER 16
-#define LEFT_WHEEL 17
-#define LEFT_PHASE 18
-
-#define RIGHT_WHEEL 19 
-#define RIGHT_BLINKER 20
-#define RIGHT_PHASE 21
-
-void left_wheel_control();
-void right_wheel_control();
-
+void turn_please(int com){
+    if (com>(50+TURN_TOL)| com<(50-TURN_TOL)){
+        right_wheel_control(com);
+        left_wheel_control(100-com); //too bright for testing
+        printf("com = %d, so we're Turning \n", com); 
+}
+}
 
 void init_left_side(void){
     gpio_init(LEFT_PHASE); 
@@ -58,39 +55,6 @@ void init_right_side(void){
 
 }
 
-int main()
-{
-    stdio_init_all();
-    init_left_side(); 
-    init_right_side();
-    int left_dc = 50; 
-    int right_dc = 50; 
-    uint16_t wrap = 50000;
-    while (true) {
-        printf("Are We Turning Left or Right?");
-        char dir_msg;
-        scanf("%c", &dir_msg);
-        printf("\n%c\n", dir_msg);
-        if (dir_msg == '+'){
-            printf("Turning Left (More Right Wheel Less Left Wheel\n\r");
-            right_dc = right_dc + 10; 
-            right_wheel_control(right_dc);
-            left_dc = left_dc - 10;
-            left_wheel_control(left_dc);
-            printf("The Right Wheel Duty Cycle is Now: %d Percent \n\r",right_dc);
-            printf("The Left Wheel Duty Cycle is Now: %d Percent \n\r",left_dc);
-        }
-        if (dir_msg == '-'){
-            printf("Turning Right (More Left Wheel Less Right Wheel\n\r");
-            right_dc = right_dc - 10; 
-            right_wheel_control(right_dc);
-            left_dc = left_dc + 10;
-            left_wheel_control(left_dc);
-            printf("The Right Wheel Duty Cycle is Now: %d Percent \n\r",right_dc);
-            printf("The Left Wheel Duty Cycle is Now: %d Percent \n\r",left_dc);
-        }
-    }
-}
 
 void left_wheel_control(int duty_cycle){
     uint16_t wrap = 50000;

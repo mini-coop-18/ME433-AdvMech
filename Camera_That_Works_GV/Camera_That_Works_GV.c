@@ -26,7 +26,7 @@ int main()
         convertImage();
         // printf("Converted Image");
         int com = findLine(IMAGESIZEY/2); // calculate the position of the center of the ine
-        // printf("FindLine Function");
+        printf("Center of Mass: %d\n", com);
         setPixel(IMAGESIZEY/2,com,0,255,0); // draw the center so you can see it in python
         // printf("About to Print Image");
         printImage();

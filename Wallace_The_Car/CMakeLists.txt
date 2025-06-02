@@ -35,18 +35,21 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Wallace_The_Car Wallace_The_Car.c )
+add_executable(Wallace_The_Car Wallace_The_Car.c turning.c cam.c)
 
 pico_set_program_name(Wallace_The_Car "Wallace_The_Car")
 pico_set_program_version(Wallace_The_Car "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
 pico_enable_stdio_uart(Wallace_The_Car 0)
-pico_enable_stdio_usb(Wallace_The_Car 0)
+pico_enable_stdio_usb(Wallace_The_Car 1)
 
 # Add the standard library to the build
 target_link_libraries(Wallace_The_Car
-        pico_stdlib)
+        pico_stdlib
+        hardware_i2c             
+        hardware_pwm
+        hardware_pio )
 
 # Add the standard include files to the build
 target_include_directories(Wallace_The_Car PRIVATE
