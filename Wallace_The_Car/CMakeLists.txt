@@ -28,33 +28,30 @@ set(PICO_BOARD pico2 CACHE STRING "Board type")
 # Pull in Raspberry Pi Pico SDK (must be before project)
 include(pico_sdk_import.cmake)
 
-project(Camera_Graces_Version C CXX ASM)
+project(Wallace_The_Car C CXX ASM)
 
 # Initialise the Raspberry Pi Pico SDK
 pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Camera_Graces_Version Camera_Graces_Version.c )
+add_executable(Wallace_The_Car Wallace_The_Car.c )
 
-pico_set_program_name(Camera_Graces_Version "Camera_Graces_Version")
-pico_set_program_version(Camera_Graces_Version "0.1")
+pico_set_program_name(Wallace_The_Car "Wallace_The_Car")
+pico_set_program_version(Wallace_The_Car "0.1")
 
 # Modify the below lines to enable/disable output over UART/USB
-pico_enable_stdio_uart(Camera_Graces_Version 0)
-pico_enable_stdio_usb(Camera_Graces_Version 1)
+pico_enable_stdio_uart(Wallace_The_Car 0)
+pico_enable_stdio_usb(Wallace_The_Car 0)
 
 # Add the standard library to the build
-target_link_libraries(Camera_Graces_Version
-        pico_stdlib 
-        hardware_i2c             
-        hardware_pwm
-        hardware_pio )
+target_link_libraries(Wallace_The_Car
+        pico_stdlib)
 
 # Add the standard include files to the build
-target_include_directories(Camera_Graces_Version PRIVATE
+target_include_directories(Wallace_The_Car PRIVATE
         ${CMAKE_CURRENT_LIST_DIR}
 )
 
-pico_add_extra_outputs(Camera_Graces_Version)
+pico_add_extra_outputs(Wallace_The_Car)
 
