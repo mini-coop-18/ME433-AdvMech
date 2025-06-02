@@ -1,6 +1,6 @@
 
 
-#define LEFT_BLINKER 15
+#define LEFT_BLINKER 16
 #define LEFT_WHEEL 17
 #define LEFT_PHASE 18
 

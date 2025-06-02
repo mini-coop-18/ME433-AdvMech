@@ -4,13 +4,25 @@
 #include "hardware/pwm.h"
 #include "turning.h"
 #define TURN_TOL 0
-
+#define TURN_ZERO 40
 void turn_please(int com){
-    if (com>(50+TURN_TOL)| com<(50-TURN_TOL)){
-        right_wheel_control(com);
-        left_wheel_control(100-com); //too bright for testing
-        printf("com = %d, so we're Turning \n", com); 
-}
+    int com_delta = com-TURN_ZERO; 
+    printf("COM is %d \n\r", com);
+    printf("COM delta is %d \r\n", com_delta);
+    if (com_delta<TURN_TOL){
+        printf("Turning Right \n\r");
+        left_wheel_control(-1*com_delta*10); 
+        right_wheel_control(-1*com_delta); 
+        printf("Left Wheel is %d \t Right Wheel is %d \n", -1*com_delta*10, -1*com_delta);
+    }
+    if (com_delta>TURN_TOL){
+        printf("Turning Left \n\r");
+        right_wheel_control(com_delta*10); 
+        left_wheel_control(com_delta);
+        printf("Left Wheel is %d \t Right Wheel is %d\n", com_delta, 10*com_delta);
+
+    }
+
 }
 
 void init_left_side(void){
@@ -77,7 +89,7 @@ void left_wheel_control(int duty_cycle){
 
 void right_wheel_control(int duty_cycle){
     uint16_t wrap = 50000;
-        if(duty_cycle>100){
+    if(duty_cycle>100){
         duty_cycle = 100;
     }
     if (duty_cycle<-100){
