@@ -4,11 +4,13 @@
 #include "hardware/pwm.h"
 #include "turning.h"
 
-#define TURN_TOL 10
+#define TURN_TOL 9
 #define TURN_ZERO 40 //Middle 
 
-#define BIG_CUTOFF 18 //BIG Turn CutOff
-#define SHARP_CUTOFF 25 //Shart Turn CutOff
+#define BIG_CUTOFF 20 //BIG Turn CutOff
+#define SHARP_CUTOFF 30 //Sharp Turn CutOff
+
+#define STOP_CUTOFF 45
 
 #define DEFAULT_DC 40
 
@@ -23,14 +25,14 @@ void turn_please(int com){
     if (com_delta>SHARP_CUTOFF){
         com_delta = SHARP_CUTOFF;
         printf("Sharp Turn\n");
-        turn_weight_smol = 1;
-        turn_weight_big = 4;
+        turn_weight_smol = 0;
+        turn_weight_big = 3;
     }
     else if (com_delta<-1*SHARP_CUTOFF){
         printf("Sharp Turn\n");
-        turn_weight_smol = 1;
+        turn_weight_smol = 0;
         com_delta = -1*SHARP_CUTOFF;
-        turn_weight_big = 4;
+        turn_weight_big = 3;
     }
     //Big Turns
     if (com_delta>BIG_CUTOFF){
@@ -58,15 +60,15 @@ void turn_please(int com){
     if (com_delta>(TURN_TOL)){
         printf("Turning Right \n\n");
         // turn_count++;
-        left_wheel_control(com_delta*turn_weight_big); 
-        right_wheel_control(com_delta*turn_weight_smol); 
+        right_wheel_control(com_delta*turn_weight_big); 
+        left_wheel_control(com_delta*turn_weight_smol); 
         // printf("Left Wheel is %d \t Right Wheel is %d \n", com_delta*turn_weight_smol, turn_weight_big*com_delta);
     }
     else if (com_delta<(-1*TURN_TOL)){
         // turn_count++;
         printf("Turning Left \n\n");
-        right_wheel_control(-1*com_delta*turn_weight_big); 
-        left_wheel_control(-1*com_delta*turn_weight_smol);
+        left_wheel_control(-1*com_delta*turn_weight_big); 
+        right_wheel_control(-1*com_delta*turn_weight_smol);
         // printf("Left Wheel is %d \t Right Wheel is %d\n", -1*turn_weight_smol*com_delta, -1*turn_weight_big*com_delta);
 
     }
