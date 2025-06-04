@@ -7,8 +7,8 @@
 #define TURN_TOL 9
 #define TURN_ZERO 40 //Middle 
 
-#define BIG_CUTOFF 20 //BIG Turn CutOff
-#define SHARP_CUTOFF 30 //Sharp Turn CutOff
+#define BIG_CUTOFF 20//BIG Turn CutOff
+#define SHARP_CUTOFF 28 //Sharp Turn CutOff
 
 #define STOP_CUTOFF 45
 
@@ -35,7 +35,7 @@ void turn_please(int com){
         turn_weight_big = 3;
     }
     //Big Turns
-    if (com_delta>BIG_CUTOFF){
+    else if (com_delta>BIG_CUTOFF){
         com_delta = BIG_CUTOFF;
         turn_weight_smol = 1;
         turn_weight_big = 3;
