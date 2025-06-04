@@ -122,7 +122,7 @@ int main(void)
     x_control = 0; 
     y_control = 0;
 
-    if(gpio_get(MODE_BUTTON) == 0){
+    if(gpio_get(MODE_BUTTON) == 1){
       gpio_put(LED_PIN, 0);
       for(int i = 1;i<CIR_LEN*2;i++){
         x_control = round(X_Circle_Waveform[i]-X_Circle_Waveform[i-1]);

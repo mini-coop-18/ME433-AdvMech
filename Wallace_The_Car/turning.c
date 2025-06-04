@@ -3,26 +3,79 @@
 #include "hardware/gpio.h"
 #include "hardware/pwm.h"
 #include "turning.h"
-#define TURN_TOL 0
-#define TURN_ZERO 40
+
+#define TURN_TOL 10
+#define TURN_ZERO 40 //Middle 
+
+#define BIG_CUTOFF 18 //BIG Turn CutOff
+#define SHARP_CUTOFF 25 //Shart Turn CutOff
+
+#define DEFAULT_DC 40
+
 void turn_please(int com){
     int com_delta = com-TURN_ZERO; 
+    int turn_weight_smol = 2;
+    int turn_weight_big = 3;
+    // static char turn_count = 0; 
+    //Figuring Out What Kind of Turn 
+
+    //Sharp turns
+    if (com_delta>SHARP_CUTOFF){
+        com_delta = SHARP_CUTOFF;
+        printf("Sharp Turn\n");
+        turn_weight_smol = 1;
+        turn_weight_big = 4;
+    }
+    else if (com_delta<-1*SHARP_CUTOFF){
+        printf("Sharp Turn\n");
+        turn_weight_smol = 1;
+        com_delta = -1*SHARP_CUTOFF;
+        turn_weight_big = 4;
+    }
+    //Big Turns
+    if (com_delta>BIG_CUTOFF){
+        com_delta = BIG_CUTOFF;
+        turn_weight_smol = 1;
+        turn_weight_big = 3;
+        printf("Big Turn\n");
+    }
+    else if (com_delta<-BIG_CUTOFF){
+        turn_weight_smol = 1;
+        printf("Big Turn\n");
+        com_delta = -1*BIG_CUTOFF;
+        turn_weight_big = 3;
+    }
+    //Smallest Turns
+    else{
+        printf("Normal Turn\n"); 
+        int turn_weight_smol = 2;
+        int turn_weight_big = 3;
+    }
     printf("COM is %d \n\r", com);
     printf("COM delta is %d \r\n", com_delta);
-    if (com_delta<TURN_TOL){
-        printf("Turning Right \n\r");
-        left_wheel_control(-1*com_delta*10); 
-        right_wheel_control(-1*com_delta); 
-        printf("Left Wheel is %d \t Right Wheel is %d \n", -1*com_delta*10, -1*com_delta);
+
+    //Commanding the Turnins 
+    if (com_delta>(TURN_TOL)){
+        printf("Turning Right \n\n");
+        // turn_count++;
+        left_wheel_control(com_delta*turn_weight_big); 
+        right_wheel_control(com_delta*turn_weight_smol); 
+        // printf("Left Wheel is %d \t Right Wheel is %d \n", com_delta*turn_weight_smol, turn_weight_big*com_delta);
     }
-    if (com_delta>TURN_TOL){
-        printf("Turning Left \n\r");
-        right_wheel_control(com_delta*10); 
-        left_wheel_control(com_delta);
-        printf("Left Wheel is %d \t Right Wheel is %d\n", com_delta, 10*com_delta);
+    else if (com_delta<(-1*TURN_TOL)){
+        // turn_count++;
+        printf("Turning Left \n\n");
+        right_wheel_control(-1*com_delta*turn_weight_big); 
+        left_wheel_control(-1*com_delta*turn_weight_smol);
+        // printf("Left Wheel is %d \t Right Wheel is %d\n", -1*turn_weight_smol*com_delta, -1*turn_weight_big*com_delta);
 
     }
-
+    else{ //we're not turning - just hanging out 
+        // turn_count = 0;
+        printf("Not Turning\n\n");
+        right_wheel_control(DEFAULT_DC);
+        left_wheel_control(DEFAULT_DC);
+    }
 }
 
 void init_left_side(void){
@@ -35,7 +88,7 @@ void init_left_side(void){
     uint left_slice_num = pwm_gpio_to_slice_num(LEFT_WHEEL); // Get PWM slice number
     float div = 60; 
     uint16_t wrap = 50000; // when to rollover, must be less than 65535
-    pwm_set_gpio_level(LEFT_WHEEL, wrap*50/100); // set the duty cycle to 50%
+    pwm_set_gpio_level(LEFT_WHEEL, wrap*DEFAULT_DC/100); // set the duty cycle to 50%
     pwm_set_clkdiv(left_slice_num, div); // divider
     pwm_set_wrap(left_slice_num, wrap);
     pwm_set_enabled(left_slice_num, true); // turn on the PWM
@@ -56,7 +109,7 @@ void init_right_side(void){
     uint right_slice_num = pwm_gpio_to_slice_num(RIGHT_WHEEL); // Get PWM slice number
     float div = 60; 
     uint16_t wrap = 50000; // when to rollover, must be less than 65535
-    pwm_set_gpio_level(RIGHT_WHEEL, wrap*50/100); // set the duty cycle to 50%
+    pwm_set_gpio_level(RIGHT_WHEEL, wrap*DEFAULT_DC/100); // set the duty cycle to 50%
     pwm_set_clkdiv(right_slice_num, div); // divider
     pwm_set_wrap(right_slice_num, wrap);
     pwm_set_enabled(right_slice_num, true); // turn on the PWM

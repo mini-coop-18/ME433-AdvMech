@@ -18,7 +18,9 @@ int main()
         setSaveImage(1);
         while(getSaveImage()==1){}
         convertImage();
+        gpio_put(LEFT_BLINKER, 0);
         int com = findLine(IMAGESIZEY/2); // calculate the position of the center of the ine
         turn_please(com);
+        gpio_put(LEFT_BLINKER, 1);
     }
 }
