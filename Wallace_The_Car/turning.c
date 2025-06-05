@@ -8,7 +8,7 @@
 #define TURN_ZERO 40 //Middle 
 
 #define BIG_CUTOFF 20//BIG Turn CutOff
-#define SHARP_CUTOFF 28 //Sharp Turn CutOff
+#define SHARP_CUTOFF 27 //Sharp Turn CutOff
 
 #define STOP_CUTOFF 45
 
