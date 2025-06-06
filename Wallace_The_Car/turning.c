@@ -4,13 +4,13 @@
 #include "hardware/pwm.h"
 #include "turning.h"
 
-#define TURN_TOL 9
+#define TURN_TOL 5
 #define TURN_ZERO 40 //Middle 
 
 #define BIG_CUTOFF 20//BIG Turn CutOff
-#define SHARP_CUTOFF 27 //Sharp Turn CutOff
+#define SHARP_CUTOFF 35 //Sharp Turn CutOff
 
-#define STOP_CUTOFF 45
+#define STOP_CUTOFF 45 //if COM delta> then stop the robot because things have gone awry 
 
 #define DEFAULT_DC 40
 
@@ -37,12 +37,12 @@ void turn_please(int com){
     //Big Turns
     else if (com_delta>BIG_CUTOFF){
         com_delta = BIG_CUTOFF;
-        turn_weight_smol = 1;
+        turn_weight_smol = 0;
         turn_weight_big = 3;
         printf("Big Turn\n");
     }
     else if (com_delta<-BIG_CUTOFF){
-        turn_weight_smol = 1;
+        turn_weight_smol = 0;
         printf("Big Turn\n");
         com_delta = -1*BIG_CUTOFF;
         turn_weight_big = 3;
